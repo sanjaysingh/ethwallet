@@ -22,11 +22,15 @@
             <!-- Tabs -->
             <div class="mb-4 border-b border-gray-200">
                 <nav class="flex space-x-4" aria-label="Tabs">
-                    <button v-for="tab in tabs" :key="tab" @click="currentTab = tab" :class="[
-                            'py-2 px-4 text-sm font-medium rounded-t-lg',
+                    <button v-for="tab in tabs" :key="tab" @click="currentTab = tab" 
+                        :disabled="(tab === 'Accounts' || tab === 'Transfer') && !isWalletInitialized"
+                        :class="[
+                            'py-2 px-4 text-sm font-medium rounded-t-lg transition',
                             currentTab === tab
                                 ? 'bg-white border-b-2 border-blue-500 text-blue-600'
-                                : 'text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                                : (tab === 'Accounts' || tab === 'Transfer') && !isWalletInitialized
+                                    ? 'text-gray-300 cursor-not-allowed'
+                                    : 'text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
                         ]">
                         {{ tab }}
                     </button>
@@ -38,9 +42,23 @@
                 <!-- Configuration Tab -->
                 <div v-if="currentTab === 'Configuration'" class="space-y-4">
                     <div class="space-y-2">
-                        <label for="rpc" class="block text-sm font-medium text-gray-700">RPC Endpoint:</label>
-                        <input type="text" id="rpc" v-model="rpcEndpoint"
+                        <label for="network" class="block text-sm font-medium text-gray-700">Network:</label>
+                        <select id="network" v-model="selectedNetwork" @change="updateRpcEndpoint"
                             class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                            <option v-for="network in availableNetworks" :key="network.id" :value="network.id">
+                                {{ network.name }}
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="rpc" class="block text-sm font-medium text-gray-700">RPC Endpoint URL:</label>
+                        <input type="text" id="rpc" v-model="rpcEndpoint" 
+                            :readonly="selectedNetwork !== 'custom'"
+                            :class="[
+                                'w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500',
+                                selectedNetwork !== 'custom' ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
+                            ]">
                     </div>
 
                     <div class="space-y-2">
@@ -62,14 +80,10 @@
                         </div>
                     </div>
 
-                    <div class="flex space-x-4">
+                    <div>
                         <button @click="initializeWallet"
-                            class="flex-1 bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
+                            class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
                             Initialize Wallet
-                        </button>
-                        <button @click="refreshAccounts"
-                            class="flex-1 bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 transition">
-                            Refresh
                         </button>
                     </div>
 
@@ -79,6 +93,17 @@
 
                 <!-- Accounts Tab -->
                 <div v-if="currentTab === 'Accounts'" class="space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="text-sm font-medium text-blue-800">
+                            Connected Network: {{ chainInfo?.name || 'Not Connected' }}
+                            <span v-if="chainInfo?.chainId" class="text-xs ml-2">(Chain ID: {{ chainInfo.chainId }})</span>
+                        </div>
+                        <div class="text-xs text-blue-600 mt-1">
+                            <div><strong>RPC Endpoint:</strong> {{ rpcEndpoint }}</div>
+                            <div v-if="chainInfo?.nativeSymbol"><strong>Native Token:</strong> {{ chainInfo.nativeSymbol }}</div>
+                        </div>
+                    </div>
+                    
                     <div v-for="account in accounts" :key="account.address"
                         class="p-4 border border-gray-200 rounded-lg">
                         <div class="font-medium text-gray-700 break-all">Address: {{ account.address }}</div>
@@ -89,6 +114,17 @@
 
                 <!-- Transfer Tab -->
                 <div v-if="currentTab === 'Transfer'" class="space-y-4">
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                        <div class="text-sm font-medium text-blue-800">
+                            Connected Network: {{ chainInfo?.name || 'Not Connected' }}
+                            <span v-if="chainInfo?.chainId" class="text-xs ml-2">(Chain ID: {{ chainInfo.chainId }})</span>
+                        </div>
+                        <div class="text-xs text-blue-600 mt-1">
+                            <div><strong>RPC Endpoint:</strong> {{ rpcEndpoint }}</div>
+                            <div v-if="chainInfo?.nativeSymbol"><strong>Native Token:</strong> {{ chainInfo.nativeSymbol }}</div>
+                        </div>
+                    </div>
+                    
                     <select v-model="selectedFromAddress" @change="updateTokenBalance"
                         class="w-full p-2 border border-gray-300 rounded-md">
                         <option value="">Select sending address</option>
@@ -156,9 +192,49 @@
             setup() {
                 const currentTab = ref('Configuration');
                 const tabs = ['Configuration', 'Accounts', 'Transfer'];
+                const selectedNetwork = ref('base');
                 const rpcEndpoint = ref('https://mainnet.base.org');
                 const seedPhrase = ref('');
                 const seedVisible = ref(false);
+                
+                // Available networks with their RPC endpoints
+                const availableNetworks = ref([
+                    {
+                        id: 'ethereum',
+                        name: 'Ethereum Mainnet',
+                        rpcUrl: 'https://eth.drpc.org'
+                    },
+                    {
+                        id: 'sepolia',
+                        name: 'Sepolia Testnet',
+                        rpcUrl: 'https://sepolia.drpc.org'
+                    },
+                    {
+                        id: 'base',
+                        name: 'Base',
+                        rpcUrl: 'https://mainnet.base.org'
+                    },
+                    {
+                        id: 'optimism',
+                        name: 'Optimism',
+                        rpcUrl: 'https://mainnet.optimism.io'
+                    },
+                    {
+                        id: 'polygon',
+                        name: 'Polygon',
+                        rpcUrl: 'https://polygon-rpc.com'
+                    },
+                    {
+                        id: 'arbitrum',
+                        name: 'Arbitrum One',
+                        rpcUrl: 'https://arb1.arbitrum.io/rpc'
+                    },
+                    {
+                        id: 'custom',
+                        name: 'Custom',
+                        rpcUrl: ''
+                    }
+                ]);
                 const walletStatus = ref('');
                 const error = ref('');
                 const accounts = ref([]);
@@ -173,7 +249,9 @@
                 const tokenInfo = ref(null);
 
                 let provider = null;
-                let wallets = [];
+                const wallets = ref([]);
+                const walletPrivateKeys = []; // Non-reactive array to store private keys
+                const isWalletInitialized = ref(false);
                 let allowedRpcEndpoint = null;
 
                 onMounted(() => {
@@ -181,39 +259,66 @@
                 });
 
                 const detectChainInfo = async () => {
+                    // Set fallback chain info based on RPC endpoint first
+                    let fallbackInfo = { name: 'Unknown Chain', chainId: 0, nativeSymbol: 'ETH' };
+                    
+                    if (rpcEndpoint.value.includes('base.org')) {
+                        fallbackInfo = { name: 'Base', chainId: 8453, nativeSymbol: 'ETH' };
+                    } else if (rpcEndpoint.value.includes('optimism.io')) {
+                        fallbackInfo = { name: 'Optimism', chainId: 10, nativeSymbol: 'ETH' };
+                    } else if (rpcEndpoint.value.includes('polygon')) {
+                        fallbackInfo = { name: 'Polygon', chainId: 137, nativeSymbol: 'MATIC' };
+                    } else if (rpcEndpoint.value.includes('arbitrum.io')) {
+                        fallbackInfo = { name: 'Arbitrum', chainId: 42161, nativeSymbol: 'ETH' };
+                    } else if (rpcEndpoint.value.includes('sepolia')) {
+                        fallbackInfo = { name: 'Sepolia', chainId: 11155111, nativeSymbol: 'ETH' };
+                    } else if (rpcEndpoint.value.includes('eth.drpc.org') || rpcEndpoint.value.includes('ethereum')) {
+                        fallbackInfo = { name: 'Ethereum', chainId: 1, nativeSymbol: 'ETH' };
+                    }
+                    
+                    // Set fallback info immediately
+                    chainInfo.value = fallbackInfo;
+                    
+                    // Try to get real network info, but don't fail if it doesn't work
                     try {
                         if (!provider) return;
+                        
+                        // Use setTimeout to defer the network detection
+                                                 setTimeout(async () => {
+                             try {
+                                 const network = await provider.getNetwork();
+                                const chainId = Number(network.chainId);
 
-                        const network = await provider.getNetwork();
-                        const chainId = Number(network.chainId);
+                                // Map chain IDs to their native symbols
+                                const chainToSymbol = {
+                                    1: 'ETH',      // Ethereum Mainnet
+                                    11155111: 'ETH', // Sepolia Testnet
+                                    137: 'MATIC',  // Polygon
+                                    56: 'BNB',     // BSC
+                                    43114: 'AVAX', // Avalanche
+                                    42161: 'ETH',  // Arbitrum
+                                    10: 'ETH',     // Optimism
+                                    8453: 'ETH',   // Base
+                                    324: 'ETH',    // zkSync Era
+                                    59144: 'ETH',  // Linea
+                                    100: 'XDAI',   // Gnosis Chain
+                                    42220: 'CELO', // Celo
+                                };
 
-                        // Map chain IDs to their native symbols
-                        const chainToSymbol = {
-                            1: 'ETH',      // Ethereum Mainnet
-                            137: 'MATIC',  // Polygon
-                            56: 'BNB',     // BSC
-                            43114: 'AVAX', // Avalanche
-                            42161: 'ETH',  // Arbitrum
-                            10: 'ETH',     // Optimism
-                            8453: 'ETH',   // Base
-                            324: 'ETH',    // zkSync Era
-                            59144: 'ETH',  // Linea
-                            100: 'XDAI',   // Gnosis Chain
-                            42220: 'CELO', // Celo
-                        };
-
-                        chainInfo.value = {
-                            name: network.name,
-                            chainId: chainId,
-                            nativeSymbol: chainToSymbol[chainId] || 'ETH' // Default to ETH if chain unknown
-                        };
+                                chainInfo.value = {
+                                    name: network.name,
+                                    chainId: chainId,
+                                    nativeSymbol: chainToSymbol[chainId] || 'ETH'
+                                };
+                            } catch (networkErr) {
+                                console.log('Network detection failed, using fallback info');
+                                // Keep the fallback info we already set
+                            }
+                        }, 1000);
+                        
                     } catch (err) {
-                        console.error('Error detecting chain:', err);
-                        chainInfo.value = {
-                            name: 'Unknown Chain',
-                            chainId: 0,
-                            nativeSymbol: 'ETH'
-                        };
+                        console.log('Provider not ready, using fallback info');
+                        // Keep the fallback info we already set
                     }
                 };
 
@@ -234,10 +339,23 @@
                             throw new Error('Please provide both RPC endpoint and seed phrase');
                         }
 
+                        // Clear all existing state for fresh start
                         allowedRpcEndpoint = rpcEndpoint.value;
                         provider = new ethers.JsonRpcProvider(rpcEndpoint.value);
-                        wallets = [];
+                        wallets.value.length = 0;
+                        walletPrivateKeys.length = 0; // Clear private keys
+                        accounts.value.length = 0;
+                        isWalletInitialized.value = false;
+                        
+                        // Clear any existing UI state
+                        selectedFromAddress.value = '';
+                        tokenInfo.value = null;
+                        txStatus.value = '';
+                        estimatedGas.value = '';
+                        error.value = '';
+                        walletStatus.value = 'Initializing wallet...';
 
+                        // Create fresh wallets connected to the current provider
                         if (seedPhrase.value.includes(' ')) {
                             // Seed phrase
                             for (let i = 0; i < 5; i++) {
@@ -246,17 +364,25 @@
                                     ethers.Mnemonic.fromPhrase(seedPhrase.value),
                                     path
                                 );
-                                wallets.push(derivedWallet.connect(provider));
+                                // Store private key separately for transactions (non-reactive)
+                                walletPrivateKeys.push(derivedWallet.privateKey);
+                                
+                                // Store wallet for UI display (address, balance)
+                                const connectedWallet = derivedWallet.connect(provider);
+                                wallets.value.push(connectedWallet);
                             }
                         } else {
                             // Private key
-                            wallets.push(new ethers.Wallet(seedPhrase.value, provider));
+                            walletPrivateKeys.push(seedPhrase.value);
+                            
+                            const newWallet = new ethers.Wallet(seedPhrase.value, provider);
+                            wallets.value.push(newWallet);
                         }
                         await detectChainInfo();
                         await refreshAccounts();
+                        isWalletInitialized.value = true;
                         error.value = '';
                         walletStatus.value = 'Wallet successfully initialized!';
-                        currentTab.value = 'Accounts';
 
                     } catch (err) {
                         showError(err.message);
@@ -264,13 +390,13 @@
                 };
 
                 const refreshAccounts = async () => {
-                    if (!provider || wallets.length === 0) {
+                    if (!provider || wallets.value.length === 0) {
                         showError('Please initialize wallet first');
                         return;
                     }
 
                     const walletsWithBalance = await Promise.all(
-                        wallets.map(async (wallet) => {
+                        wallets.value.map(async (wallet) => {
                             const balance = await provider.getBalance(wallet.address);
                             return {
                                 address: wallet.address,
@@ -283,8 +409,8 @@
                         parseFloat(b.balance) - parseFloat(a.balance)
                     ).slice(0, 3);
 
-                    if (wallets.length === 1) {
-                        selectedFromAddress.value = wallets[0].address;
+                    if (wallets.value.length === 1) {
+                        selectedFromAddress.value = wallets.value[0].address;
                         await updateTokenBalance();
                     }
                 };
@@ -295,7 +421,9 @@
 
                     if (tokenType.value === 'erc20' && tokenAddress.value) {
                         try {
-                            const contract = new ethers.Contract(tokenAddress.value, ERC20_ABI, provider);
+                            const wallet = wallets.value.find(w => w.address === selectedFromAddress.value);
+                            if (!wallet) return;
+                            const contract = new ethers.Contract(tokenAddress.value, ERC20_ABI, wallet);
                             const balance = await contract.balanceOf(selectedFromAddress.value);
                             const decimals = await contract.decimals();
                             const symbol = await contract.symbol();
@@ -320,7 +448,7 @@
                     }
 
                     try {
-                        const wallet = wallets.find(w => w.address === selectedFromAddress.value);
+                        const wallet = wallets.value.find(w => w.address === selectedFromAddress.value);
                         if (!wallet) return;
 
                         let gasEstimate;
@@ -388,8 +516,19 @@
                             throw new Error('Please fill in all fields');
                         }
 
-                        const wallet = wallets.find(w => w.address === selectedFromAddress.value);
+                        const wallet = wallets.value.find(w => w.address === selectedFromAddress.value);
                         if (!wallet) throw new Error('Sender wallet not found');
+                        
+                        // Find the wallet index and get the raw private key
+                        const walletIndex = wallets.value.findIndex(w => w.address === selectedFromAddress.value);
+                        if (walletIndex === -1) throw new Error('Wallet not found');
+                        
+                        // Get the raw private key from the non-reactive array
+                        const rawPrivateKey = walletPrivateKeys[walletIndex];
+                        if (!rawPrivateKey) throw new Error('Private key not found');
+                        
+                        // Create completely fresh wallet instance using raw private key
+                        const connectedWallet = new ethers.Wallet(rawPrivateKey, provider);
 
                         let tx;
                         if (tokenType.value === 'native') {
@@ -409,10 +548,10 @@
                                 throw new Error('Failed to estimate gas. Please check if you have sufficient funds for gas.');
                             }
 
-                            tx = await wallet.sendTransaction(txRequest);
+                            tx = await connectedWallet.sendTransaction(txRequest);
                         } else {
                             if (!tokenAddress.value) throw new Error('Please provide token address');
-                            const contract = new ethers.Contract(tokenAddress.value, ERC20_ABI, wallet);
+                            const contract = new ethers.Contract(tokenAddress.value, ERC20_ABI, connectedWallet);
                             const decimals = await contract.decimals();
 
                             // Prepare the contract call
@@ -425,7 +564,7 @@
                             try {
                                 const gasEstimate = await provider.estimateGas({
                                     ...transferTx,
-                                    from: wallet.address
+                                    from: connectedWallet.address
                                 });
                                 // Add 20% buffer to the estimate
                                 transferTx.gasLimit = gasEstimate * 120n / 100n;
@@ -434,7 +573,7 @@
                                 throw new Error('Failed to estimate gas. Please check if you have sufficient funds and the token contract is valid.');
                             }
 
-                            tx = await wallet.sendTransaction(transferTx);
+                            tx = await connectedWallet.sendTransaction(transferTx);
                         }
 
                         txStatus.value = `Transaction sent! Hash: ${tx.hash}`;
@@ -447,19 +586,41 @@
                     }
                 };
 
-                const generateNewWallet = () => {
+                const generateNewWallet = async () => {
                     try {
                         const wallet = ethers.Wallet.createRandom();
                         seedPhrase.value = wallet.privateKey;
                         walletStatus.value = `New wallet generated! Address: ${wallet.address}`;
+                        
+                        // Auto-initialize the wallet after generation
+                        await initializeWallet();
                     } catch (err) {
                         showError('Failed to generate wallet: ' + err.message);
+                    }
+                };
+
+                const updateRpcEndpoint = async () => {
+                    const network = availableNetworks.value.find(n => n.id === selectedNetwork.value);
+                    if (network && network.id !== 'custom') {
+                        rpcEndpoint.value = network.rpcUrl;
+                    }
+                    
+                    // If wallet is already initialized, reinitialize it with the new network
+                    if (provider && wallets.value.length > 0 && seedPhrase.value) {
+                        try {
+                            walletStatus.value = 'Switching network...';
+                            await initializeWallet();
+                        } catch (err) {
+                            showError('Failed to switch network: ' + err.message);
+                        }
                     }
                 };
 
                 return {
                     currentTab,
                     tabs,
+                    selectedNetwork,
+                    availableNetworks,
                     rpcEndpoint,
                     seedPhrase,
                     seedVisible,
@@ -475,12 +636,13 @@
                     estimatedGas,
                     chainInfo,
                     tokenInfo,
+                    isWalletInitialized,
                     toggleSeedVisibility,
                     initializeWallet,
-                    refreshAccounts,
                     updateTokenBalance,
                     sendTransaction,
-                    generateNewWallet
+                    generateNewWallet,
+                    updateRpcEndpoint
                 };
             }
         }).mount('#app');
