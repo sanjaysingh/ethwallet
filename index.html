@@ -67,6 +67,7 @@
                         <div class="relative flex space-x-2">
                             <div class="relative flex-1">
                                 <input :type="seedVisible ? 'text' : 'password'" id="seed" v-model="seedPhrase"
+                                    @keydown.enter="initializeWallet"
                                     class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
                                 <button @click="toggleSeedVisibility"
                                     class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">
@@ -106,7 +107,29 @@
                     
                     <div v-for="account in accounts" :key="account.address"
                         class="p-4 border border-gray-200 rounded-lg">
-                        <div class="font-medium text-gray-700 break-all">Address: {{ account.address }}</div>
+                        <div class="font-medium text-gray-700 break-all flex items-center justify-between">
+                            <span>Address: {{ account.address }}</span>
+                            <div class="flex items-center gap-1 flex-shrink-0">
+                                <div class="relative">
+                                    <button @click="copyAddress(account.address)" 
+                                        class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                        title="Copy address">
+                                        📋
+                                    </button>
+                                    <!-- Overlay notification to the left of button -->
+                                    <div v-if="copiedAddress === account.address" 
+                                        class="absolute -left-16 top-1/2 transform -translate-y-1/2 bg-green-500 text-white text-xs rounded-lg px-2 py-1 z-10 whitespace-nowrap shadow-lg">
+                                        copied
+                                    </div>
+                                </div>
+                                <a :href="getQRCodeUrl(account.address)" 
+                                    target="_blank" 
+                                    class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                                    title="View QR Code">
+                                    <img src="qr-icon.svg" alt="QR Code" class="w-5 h-5">
+                                </a>
+                            </div>
+                        </div>
                         <div class="text-gray-600">Balance: {{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{
                             chainInfo?.nativeSymbol }}</div>
                     </div>
@@ -252,6 +275,7 @@
                 const wallets = ref([]);
                 const walletPrivateKeys = []; // Non-reactive array to store private keys
                 const isWalletInitialized = ref(false);
+                const copiedAddress = ref(null); // Track which address was recently copied
                 let allowedRpcEndpoint = null;
 
                 onMounted(() => {
@@ -599,6 +623,26 @@
                     }
                 };
 
+                const copyAddress = async (address) => {
+                    try {
+                        await navigator.clipboard.writeText(address);
+                        copiedAddress.value = address;
+                        
+                        // Clear the notification after 2 seconds
+                        setTimeout(() => {
+                            copiedAddress.value = null;
+                        }, 2000);
+                    } catch (err) {
+                        showError('Failed to copy address to clipboard');
+                    }
+                };
+
+                const getQRCodeUrl = (address) => {
+                    // Encode address to base64
+                    const base64Address = btoa(address);
+                    return `https://qrcode.sanjaysingh.net/?text=${base64Address}`;
+                };
+
                 const updateRpcEndpoint = async () => {
                     const network = availableNetworks.value.find(n => n.id === selectedNetwork.value);
                     if (network && network.id !== 'custom') {
@@ -637,11 +681,14 @@
                     chainInfo,
                     tokenInfo,
                     isWalletInitialized,
+                    copiedAddress,
                     toggleSeedVisibility,
                     initializeWallet,
                     updateTokenBalance,
                     sendTransaction,
                     generateNewWallet,
+                    copyAddress,
+                    getQRCodeUrl,
                     updateRpcEndpoint
                 };
             }
