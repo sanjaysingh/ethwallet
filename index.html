@@ -1,203 +1,258 @@
 <!DOCTYPE html>
-<html>
-
+<html lang="en" :data-bs-theme="currentTheme">
 <head>
-    <title>Ethereum Wallet (Testing Only)</title>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Ethereum Wallet (Testing Only)</title>
+    <link rel="stylesheet" href="libs/bootstrap-5.3.3.min.css">
+    <link rel="stylesheet" href="libs/bootstrap-icons-1.11.3.min.css">
+    <link rel="stylesheet" href="styles.css">
     <script src="libs/ethers-6.13.5-ethers.umd.min.js"></script>
     <script src="libs/vue-3.5.13-vue.global.prod.min.js"></script>
-    <link rel="stylesheet" href="libs/tailwindcss-2.2.19-tailwind.min.css">
 </head>
+<body>
+    <!-- Vue App Root -->
+    <div id="app" v-cloak>
+        <!-- Header - Full width, content aligned to page edges -->
+        <header class="mb-4 p-2 bg-info-subtle d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0"><i class="bi bi-currency-exchange me-2"></i>Ethereum Wallet (Testing Only)</h1> 
+            <span class="theme-toggle" @click="toggleTheme" style="cursor: pointer;">
+                <i :class="['bi', currentTheme === 'dark' ? 'bi-moon-stars-fill' : 'bi-sun-fill']"></i>
+            </span>
+        </header>
 
-<body class="bg-gray-50">
-    <div id="app" class="min-h-screen">
-        <!-- Top Bar -->
-        <div class="bg-blue-100 py-2 shadow-md">
-            <h1 class="text-2xl font-bold text-center text-gray-800">Ethereum Wallet (Testing Only)</h1>
-        </div>
-
-        <!-- Main Content -->
-        <div class="max-w-3xl mx-auto p-4">
-            <!-- Tabs -->
-            <div class="mb-4 border-b border-gray-200">
-                <nav class="flex space-x-4" aria-label="Tabs">
-                    <button v-for="tab in tabs" :key="tab" @click="currentTab = tab" 
-                        :disabled="(tab === 'Accounts' || tab === 'Transfer') && !isWalletInitialized"
-                        :class="[
-                            'py-2 px-4 text-sm font-medium rounded-t-lg transition',
-                            currentTab === tab
-                                ? 'bg-white border-b-2 border-blue-500 text-blue-600'
-                                : (tab === 'Accounts' || tab === 'Transfer') && !isWalletInitialized
-                                    ? 'text-gray-300 cursor-not-allowed'
-                                    : 'text-gray-500 hover:text-gray-700 hover:border-gray-300 cursor-pointer'
-                        ]">
-                        {{ tab }}
-                    </button>
-                </nav>
+        <div class="container"> <!-- Main content container starts here -->
+            <!-- Alert Placeholder -->
+            <div id="alert-placeholder">
+                 <transition-group name="alert-fade" tag="div">
+                     <div v-for="alert in alerts" :key="alert.id" :class="['alert', 'alert-' + alert.type, 'alert-dismissible', 'fade', 'show']" role="alert">
+                        <div>{{ alert.message }}</div>
+                        <button type="button" class="btn-close" @click="dismissAlert(alert.id)" aria-label="Close"></button>
+                    </div>
+                </transition-group>
             </div>
 
-            <!-- Tab Content -->
-            <div class="bg-white rounded-lg shadow-md p-6">
-                <!-- Configuration Tab -->
-                <div v-if="currentTab === 'Configuration'" class="space-y-4">
-                    <div class="space-y-2">
-                        <label for="network" class="block text-sm font-medium text-gray-700">Network:</label>
-                        <select id="network" v-model="selectedNetwork" @change="updateRpcEndpoint"
-                            class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                            <option v-for="network in availableNetworks" :key="network.id" :value="network.id">
-                                {{ network.name }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="rpc" class="block text-sm font-medium text-gray-700">RPC Endpoint URL:</label>
-                        <input type="text" id="rpc" v-model="rpcEndpoint" 
-                            :readonly="selectedNetwork !== 'custom'"
-                            :class="[
-                                'w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500',
-                                selectedNetwork !== 'custom' ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'
-                            ]">
-                    </div>
-
-                    <div class="space-y-2">
-                        <label for="seed" class="block text-sm font-medium text-gray-700">Seed Phrase or Private
-                            Key:</label>
-                        <div class="relative flex space-x-2">
-                            <div class="relative flex-1">
-                                <input :type="seedVisible ? 'text' : 'password'" id="seed" v-model="seedPhrase"
-                                    @keydown.enter="initializeWallet"
-                                    class="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
-                                <button @click="toggleSeedVisibility"
-                                    class="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500">
-                                    👁️
-                                </button>
-                            </div>
-                            <button @click="generateNewWallet"
-                                class="bg-purple-500 text-white px-4 py-2 rounded-md hover:bg-purple-600 transition">
-                                Generate New
-                            </button>
-                        </div>
-                    </div>
-
-                    <div>
-                        <button @click="initializeWallet"
-                            class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
-                            Initialize Wallet
-                        </button>
-                    </div>
-
-                    <div v-if="walletStatus" class="text-green-600 mt-2">{{ walletStatus }}</div>
-                    <div v-if="error" class="text-red-600 mt-2">{{ error }}</div>
+            <!-- Loading Overlay -->
+            <div class="loading-overlay" v-show="isLoading">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
+            </div>
 
-                <!-- Accounts Tab -->
-                <div v-if="currentTab === 'Accounts'" class="space-y-4">
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                        <div class="text-sm font-medium text-blue-800">
-                            Connected Network: {{ chainInfo?.name || 'Not Connected' }}
-                            <span v-if="chainInfo?.chainId" class="text-xs ml-2">(Chain ID: {{ chainInfo.chainId }})</span>
-                        </div>
-                        <div class="text-xs text-blue-600 mt-1">
-                            <div><strong>RPC Endpoint:</strong> {{ rpcEndpoint }}</div>
-                            <div v-if="chainInfo?.nativeSymbol"><strong>Native Token:</strong> {{ chainInfo.nativeSymbol }}</div>
-                        </div>
-                    </div>
-                    
-                    <div v-for="account in accounts" :key="account.address"
-                        class="p-4 border border-gray-200 rounded-lg">
-                        <div class="font-medium text-gray-700 break-all flex items-center justify-between">
-                            <span>Address: {{ account.address }}</span>
-                            <div class="flex items-center gap-1 flex-shrink-0">
-                                <div class="relative">
-                                    <button @click="copyAddress(account.address)" 
-                                        class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                        title="Copy address">
-                                        📋
-                                    </button>
-                                    <!-- Overlay notification to the left of button -->
-                                    <div v-if="copiedAddress === account.address" 
-                                        class="absolute -left-16 top-1/2 transform -translate-y-1/2 bg-green-500 text-white text-xs rounded-lg px-2 py-1 z-10 whitespace-nowrap shadow-lg">
-                                        copied
+            <!-- Main Wallet View (Tabs) -->
+            <div id="main-wallet-view">
+                <!-- Nav tabs -->
+                <ul class="nav nav-pills nav-fill mb-3" id="walletTab" role="tablist">
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="wallet-tab" data-bs-toggle="tab" data-bs-target="#wallet-tab-pane" type="button" role="tab" aria-controls="wallet-tab-pane" aria-selected="true"><i class="bi bi-wallet2 me-1"></i> Wallet</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="transfer-tab" data-bs-toggle="tab" data-bs-target="#transfer-tab-pane" type="button" role="tab" aria-controls="transfer-tab-pane" aria-selected="false" :disabled="!isWalletInitialized"><i class="bi bi-send me-1"></i> Send</button>
+                  </li>
+                  <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="receive-tab" data-bs-toggle="tab" data-bs-target="#receive-tab-pane" type="button" role="tab" aria-controls="receive-tab-pane" aria-selected="false" :disabled="!isWalletInitialized"><i class="bi bi-qr-code me-1"></i> Receive</button>
+                  </li>
+                </ul>
+
+                <!-- Tab panes -->
+                <div class="tab-content" id="walletTabContent">
+                  <!-- Wallet Pane -->
+                  <div class="tab-pane fade show active" id="wallet-tab-pane" role="tabpanel" aria-labelledby="wallet-tab" tabindex="0">
+
+                       <!-- Network & RPC Card -->
+                       <div class="card shadow-sm mb-4">
+                           <div class="card-body">
+                                <h5 class="card-title mb-3"><i class="bi bi-cloud-arrow-up me-1"></i> Network & RPC Configuration</h5>
+                                <div class="mb-3">
+                                    <label for="network-select" class="form-label">Network</label>
+                                    <select class="form-select mb-2" id="network-select" v-model="selectedNetwork" @change="updateRpcEndpoint">
+                                        <option v-for="network in availableNetworks" :key="network.id" :value="network.id">
+                                            {{ network.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="rpc-endpoint" class="form-label">RPC Endpoint URL</label>
+                                    <input type="text" class="form-control" id="rpc-endpoint" v-model="rpcEndpoint" 
+                                        :readonly="selectedNetwork !== 'custom'"
+                                        :class="selectedNetwork !== 'custom' ? 'bg-secondary-subtle' : ''">
+                                </div>
+                                <!-- Network status display -->
+                                <small :class="networkStatusClass">{{ networkStatusText }}</small>
+                           </div>
+                       </div>
+
+                      <!-- Manage Wallet Session Card -->
+                      <div class="card shadow-sm mb-4">
+                           <div class="card-body">
+                               <h5 class="card-title mb-3"><i class="bi bi-key-fill me-1"></i> Manage Wallet Session</h5>
+
+                               <!-- Create/Import Section -->
+                                <div v-if="showWalletManagement">
+                                    <div class="mb-3">
+                                        <button class="btn btn-primary" @click="generateNewWallet"><i class="bi bi-plus-circle me-1"></i> Generate New Wallet</button>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
+                                         <div class="input-group">
+                                             <input :type="seedVisible ? 'text' : 'password'" class="form-control" id="seed-input" 
+                                                    placeholder="Enter seed phrase or private key" v-model="seedPhrase" @keydown.enter="initializeWallet">
+                                             <button class="btn btn-outline-secondary" type="button" @click="toggleSeedVisibility" title="Show/Hide Key">
+                                                <i :class="['bi', seedVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
+                                             </button>
+                                             <button class="btn btn-success" type="button" @click="initializeWallet" :disabled="!seedPhrase" title="Import Wallet">
+                                                <i class="bi bi-box-arrow-in-right me-1"></i> Import
+                                             </button>
+                                         </div>
                                     </div>
                                 </div>
-                                <a :href="getQRCodeUrl(account.address)" 
-                                    target="_blank" 
-                                    class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                                    title="View QR Code">
-                                    <img src="qr-icon.svg" alt="QR Code" class="w-5 h-5">
-                                </a>
+
+                               <!-- Loaded Wallet Info Section -->
+                                <div v-if="showLoadedWalletDetails" class="mt-4 border-top pt-3">
+                                    <div class="mb-3">
+                                         <label class="form-label">Current Session Key:</label>
+                                         <div class="input-group">
+                                             <span class="form-control private-key-display" :class="{'text-muted': !isPrivateKeyVisible}">{{ currentPrivateKeyDisplay }}</span>
+                                             <button class="btn btn-outline-secondary" type="button" @click="toggleCurrentPrivateKeyVisibility" title="Show/Hide Key">
+                                                 <i :class="['bi', isPrivateKeyVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
+                                             </button>
+                                             <button class="btn btn-outline-secondary" type="button" @click="copyPrivateKey" title="Copy Private Key">
+                                                 <i class="bi bi-clipboard"></i>
+                                            </button>
+                                         </div>
+                                         <small class="text-danger">Never share your private key or seed phrase!</small>
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" @click="clearSession"><i class="bi bi-x-octagon me-1"></i> Clear Wallet Session</button>
+                               </div>
+
+                               <div v-if="error" class="alert alert-danger mt-3">
+                                   <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
+                               </div>
+                           </div>
+                      </div>
+
+                      <!-- Wallet Details (when wallet is loaded) -->
+                      <div class="card shadow-sm mb-4" v-if="isWalletInitialized">
+                          <div class="card-body">
+                              <h5 class="card-title mb-3"><i class="bi bi-info-circle me-1"></i> Wallet Details</h5>
+                              <!-- Account Cards -->
+                              <div v-for="account in accounts" :key="account.address" class="mb-3">
+                                 <div class="input-group">
+                                      <span class="form-control address-display">{{ account.address }} ({{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{ chainInfo?.nativeSymbol }})</span>
+                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address)" title="Copy Address">
+                                          <i class="bi bi-clipboard"></i>
+                                     </button>
+                                 </div>
+                         </div>
+                      </div>
+                   </div>
+
+                  </div>
+
+                  <!-- Send Pane -->
+                  <div class="tab-pane fade" id="transfer-tab-pane" role="tabpanel" aria-labelledby="transfer-tab" tabindex="0">
+                      <div class="card shadow-sm" v-if="isWalletInitialized">
+                        <div class="card-body">
+                             <h5 class="card-title mb-3"><i class="bi bi-send-fill me-1"></i> Send Transaction</h5>
+
+                             <div class="mb-3">
+                                 <label class="form-label">From Address:</label>
+                                 <select class="form-select" v-model="selectedFromAddress" @change="updateTokenBalance">
+                                    <option value="">Select sending address</option>
+                                    <option v-for="account in accounts" :key="account.address" :value="account.address">
+                                        {{ account.address }} ({{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{chainInfo.nativeSymbol}})
+                                    </option>
+                                </select>
+                             </div>
+
+                             <div class="mb-3">
+                                 <label class="form-label">Token Type:</label>
+                                 <select class="form-select" v-model="tokenType">
+                                    <option :value="'native'">{{ chainInfo?.nativeSymbol || 'Native Token' }}</option>
+                                    <option value="erc20">ERC20 Token</option>
+                                </select>
+                             </div>
+
+                             <div v-if="tokenType === 'erc20'" class="mb-3">
+                                <label class="form-label">ERC20 Token Contract Address:</label>
+                                <div class="input-group">
+                                    <input class="form-control" v-model="tokenAddress" placeholder="Enter token contract address" @input="updateTokenBalance">
+                                    <div v-if="tokenInfo" class="input-group-text">
+                                        Balance: {{ tokenInfo.balance }} {{ tokenInfo.symbol }}
+                                    </div>
+                                </div>
+                             </div>
+
+                             <div class="mb-3">
+                                 <label for="to-address" class="form-label">To Address</label>
+                                 <input type="text" class="form-control" id="to-address" v-model="toAddress" placeholder="Enter recipient address">
+                             </div>
+
+                             <div class="mb-3">
+                                 <label for="amount" class="form-label">Amount</label>
+                                 <input type="number" step="any" class="form-control" id="amount" v-model="amount" placeholder="Enter amount">
+                             </div>
+
+                             <div class="mb-3" v-if="estimatedGas">
+                                <div class="alert alert-info">
+                                    <strong>Gas Cost:</strong> {{ estimatedGas.ethCost }} {{ chainInfo?.nativeSymbol }}
+                                    <br><small>(Including 20% buffer for safety)</small>
+                                </div>
+                             </div>
+
+                             <button class="btn btn-success" @click="sendTransaction" :disabled="isLoading">
+                                <i class="bi bi-send-check me-1"></i> Send Transaction
+                             </button>
+
+                             <div v-if="txStatus" class="alert alert-success mt-3">
+                                <strong>Transaction Status:</strong> {{ txStatus }}
+                             </div>
+                        </div>
+                    </div>
+                     <div class="alert alert-warning" v-else>
+                         Please initialize a wallet first to send transactions.
+                     </div>
+                  </div>
+
+                  <!-- Receive Pane -->
+                  <div class="tab-pane fade" id="receive-tab-pane" role="tabpanel" aria-labelledby="receive-tab" tabindex="0">
+                      <div v-if="isWalletInitialized">
+                        <!-- Receive Cards for each account -->
+                        <div v-for="account in accounts" :key="account.address" class="card shadow-sm mb-4">
+                            <div class="card-body text-center">
+                                <h5 class="card-title mb-3"><i class="bi bi-arrow-down-circle me-1"></i> Receive {{ chainInfo?.nativeSymbol || 'ETH' }}</h5>
+                                <p>Share this address or QR code to receive funds:</p>
+                                                                 <div class="input-group mb-3 w-auto mx-auto" style="max-width: 500px;">
+                                     <span class="form-control form-control-lg address-display">{{ account.address }}</span>
+                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address)" title="Copy Address">
+                                          <i class="bi bi-clipboard"></i>
+                                      </button>
+                                 </div>
+                                <!-- Balance display -->
+                                <div class="mb-3">
+                                    <small class="text-muted">Current Balance: </small>
+                                    <span class="fw-bold">{{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{ chainInfo?.nativeSymbol }}</span>
+                                </div>
+                                <!-- QR Code Container -->
+                                <div class="qr-code-container" :data-qr-address="account.address"></div>
                             </div>
                         </div>
-                        <div class="text-gray-600">Balance: {{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{
-                            chainInfo?.nativeSymbol }}</div>
-                    </div>
-                </div>
-
-                <!-- Transfer Tab -->
-                <div v-if="currentTab === 'Transfer'" class="space-y-4">
-                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-                        <div class="text-sm font-medium text-blue-800">
-                            Connected Network: {{ chainInfo?.name || 'Not Connected' }}
-                            <span v-if="chainInfo?.chainId" class="text-xs ml-2">(Chain ID: {{ chainInfo.chainId }})</span>
-                        </div>
-                        <div class="text-xs text-blue-600 mt-1">
-                            <div><strong>RPC Endpoint:</strong> {{ rpcEndpoint }}</div>
-                            <div v-if="chainInfo?.nativeSymbol"><strong>Native Token:</strong> {{ chainInfo.nativeSymbol }}</div>
-                        </div>
-                    </div>
-                    
-                    <select v-model="selectedFromAddress" @change="updateTokenBalance"
-                        class="w-full p-2 border border-gray-300 rounded-md">
-                        <option value="">Select sending address</option>
-                        <option v-for="account in accounts" :key="account.address" :value="account.address">
-                            {{ account.address }} ({{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{chainInfo.nativeSymbol}})
-                        </option>
-                    </select>
-
-                    <select v-model="tokenType" class="w-full p-2 border border-gray-300 rounded-md">
-                        <option :value="'native'">{{ chainInfo?.nativeSymbol || 'Native Token' }}</option>
-                        <option value="erc20">ERC20 Token</option>
-                    </select>
-
-                    <div v-if="tokenType === 'erc20'" class="space-y-2">
-                        <div class="flex space-x-2 items-center">
-                            <input v-model="tokenAddress" type="text" placeholder="ERC20 Token Contract Address"
-                                @input="updateTokenBalance"
-                                class="flex-1 p-2 border border-gray-300 rounded-md">
-                            <div v-if="tokenInfo" class="text-sm text-gray-600">
-                                Balance: {{ tokenInfo.balance }} {{ tokenInfo.symbol }}
-                            </div>
-                        </div>
-                    </div>
-
-                    <input v-model="toAddress" type="text" placeholder="To Address"
-                        class="w-full p-2 border border-gray-300 rounded-md">
-
-                    <input v-model="amount" type="number" step="any" placeholder="Amount"
-                        class="w-full p-2 border border-gray-300 rounded-md">
-
-                    <div class="p-3 bg-gray-50 rounded-md">
-                        <div class="text-sm text-gray-600">
-                            <div v-if="estimatedGas" class="text-xs text-gray-500">
-                                Gas Cost: {{ estimatedGas.ethCost }} {{ chainInfo?.nativeSymbol }}
-                                <div>(Including 20% buffer for safety)</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <button @click="sendTransaction"
-                        class="w-full bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600 transition">
-                        Send Transaction
-                    </button>
-
-                    <div v-if="txStatus" class="text-green-600 mt-2 break-all">{{ txStatus }}</div>
+                      </div>
+                      <div class="alert alert-warning" v-else>
+                          Please initialize a wallet first to view receive addresses.
+                      </div>
+                  </div>
                 </div>
             </div>
-        </div>
-    </div>
 
+        </div> <!-- /container -->
+    </div> <!-- /app -->
+
+    <!-- JS Includes -->
+    <script src="libs/bootstrap-5.3.3.bundle.min.js"></script>
+    <!-- Add QR Code Library -->
+    <script src="libs/qrcode-1.0.0.min.js"></script>
+    
     <script>
         const ERC20_ABI = [
             "function balanceOf(address owner) view returns (uint256)",
@@ -209,7 +264,7 @@
             "function approve(address spender, uint256 amount) returns (bool)"
         ];
 
-        const { createApp, ref, watch, onMounted } = Vue;
+        const { createApp, ref, watch, onMounted, computed } = Vue;
 
         createApp({
             setup() {
@@ -230,7 +285,7 @@
                     {
                         id: 'sepolia',
                         name: 'Sepolia Testnet',
-                        rpcUrl: 'https://sepolia.drpc.org'
+                        rpcUrl: 'https://1rpc.io/sepolia'
                     },
                     {
                         id: 'base',
@@ -262,7 +317,7 @@
                 const error = ref('');
                 const accounts = ref([]);
                 const selectedFromAddress = ref('');
-                const tokenType = ref('native');  // Changed from 'eth'
+                const tokenType = ref('native');
                 const chainInfo = ref(null);
                 const tokenAddress = ref('');
                 const toAddress = ref('');
@@ -271,78 +326,136 @@
                 const estimatedGas = ref('');
                 const tokenInfo = ref(null);
 
+                // New state for Bootstrap styling
+                const currentTheme = ref('dark');
+                const isLoading = ref(false);
+                const alerts = ref([]);
+                const showWalletManagement = ref(true);
+                const showLoadedWalletDetails = ref(false);
+                const networkStatusText = ref('');
+                const networkStatusClass = ref('form-text text-muted d-block mt-2');
+                const isPrivateKeyVisible = ref(false);
+                const currentPrivateKey = ref('');
+                const originalSeedInput = ref(''); // Store the original input (seed phrase or private key)
+
                 let provider = null;
                 const wallets = ref([]);
-                const walletPrivateKeys = []; // Non-reactive array to store private keys
+                const walletPrivateKeys = [];
                 const isWalletInitialized = ref(false);
-                const copiedAddress = ref(null); // Track which address was recently copied
                 let allowedRpcEndpoint = null;
 
                 onMounted(() => {
-                    // No security restrictions needed
+                    // Initialize theme
+                    document.documentElement.setAttribute('data-bs-theme', currentTheme.value);
+                    updateWalletStateUI();
+                    networkStatusText.value = `Selected Network: ${getNetworkName()} (Default)`;
+                    networkStatusClass.value = 'form-text text-primary d-block mt-2';
+                    
+                    // Listen for Receive tab being shown to generate QR codes
+                    const receiveTabTrigger = document.getElementById('receive-tab');
+                    if (receiveTabTrigger) {
+                        receiveTabTrigger.addEventListener('shown.bs.tab', event => {
+                            if (isWalletInitialized.value) {
+                                generateAllQRCodes();
+                            }
+                        });
+                    }
                 });
 
+                const getNetworkName = () => {
+                    const network = availableNetworks.value.find(n => n.id === selectedNetwork.value);
+                    return network ? network.name : 'Unknown';
+                };
+
+                // Computed property for masked private key display
+                const currentPrivateKeyDisplay = computed(() => {
+                    if (!originalSeedInput.value || originalSeedInput.value.length < 10) return '***';
+                    if (isPrivateKeyVisible.value) {
+                        return originalSeedInput.value;
+                    }
+                    return `${originalSeedInput.value.substring(0, 6)}...${originalSeedInput.value.substring(originalSeedInput.value.length - 6)}`;
+                });
+
+                // Alert system
+                const showAlert = (message, type = 'info') => {
+                    const id = Date.now();
+                    const newAlert = { message, type, id };
+                    alerts.value = []; // Clear existing alerts
+                    alerts.value.push(newAlert);
+
+                    setTimeout(() => {
+                        dismissAlert(id);
+                    }, 4000);
+                };
+
+                const dismissAlert = (id) => {
+                    if (id) {
+                        alerts.value = alerts.value.filter(alert => alert.id !== id);
+                    } else {
+                        alerts.value = [];
+                    }
+                };
+
+                // Theme toggle
+                const toggleTheme = () => {
+                    currentTheme.value = currentTheme.value === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-bs-theme', currentTheme.value);
+                };
+
+                const updateWalletStateUI = () => {
+                    showWalletManagement.value = !isWalletInitialized.value;
+                    showLoadedWalletDetails.value = isWalletInitialized.value;
+                };
+
                 const detectChainInfo = async () => {
-                    // Set fallback chain info based on RPC endpoint first
-                    let fallbackInfo = { name: 'Unknown Chain', chainId: 0, nativeSymbol: 'ETH' };
-                    
-                    if (rpcEndpoint.value.includes('base.org')) {
-                        fallbackInfo = { name: 'Base', chainId: 8453, nativeSymbol: 'ETH' };
-                    } else if (rpcEndpoint.value.includes('optimism.io')) {
-                        fallbackInfo = { name: 'Optimism', chainId: 10, nativeSymbol: 'ETH' };
-                    } else if (rpcEndpoint.value.includes('polygon')) {
-                        fallbackInfo = { name: 'Polygon', chainId: 137, nativeSymbol: 'MATIC' };
-                    } else if (rpcEndpoint.value.includes('arbitrum.io')) {
-                        fallbackInfo = { name: 'Arbitrum', chainId: 42161, nativeSymbol: 'ETH' };
-                    } else if (rpcEndpoint.value.includes('sepolia')) {
-                        fallbackInfo = { name: 'Sepolia', chainId: 11155111, nativeSymbol: 'ETH' };
-                    } else if (rpcEndpoint.value.includes('eth.drpc.org') || rpcEndpoint.value.includes('ethereum')) {
-                        fallbackInfo = { name: 'Ethereum', chainId: 1, nativeSymbol: 'ETH' };
+                    // For known networks, use predefined information
+                    if (selectedNetwork.value !== 'custom') {
+                        const networkConfig = {
+                            'ethereum': { name: 'Ethereum Mainnet', chainId: 1, nativeSymbol: 'ETH' },
+                            'sepolia': { name: 'Sepolia Testnet', chainId: 11155111, nativeSymbol: 'ETH' },
+                            'base': { name: 'Base', chainId: 8453, nativeSymbol: 'ETH' },
+                            'optimism': { name: 'Optimism', chainId: 10, nativeSymbol: 'ETH' },
+                            'polygon': { name: 'Polygon', chainId: 137, nativeSymbol: 'MATIC' },
+                            'arbitrum': { name: 'Arbitrum One', chainId: 42161, nativeSymbol: 'ETH' }
+                        };
+                        
+                        chainInfo.value = networkConfig[selectedNetwork.value] || { name: 'Unknown Chain', chainId: 0, nativeSymbol: 'ETH' };
+                        return;
                     }
                     
-                    // Set fallback info immediately
-                    chainInfo.value = fallbackInfo;
+                    // Only detect network for custom RPC endpoints
+                    if (!provider) {
+                        chainInfo.value = { name: 'Unknown Chain', chainId: 0, nativeSymbol: 'ETH' };
+                        return;
+                    }
                     
-                    // Try to get real network info, but don't fail if it doesn't work
                     try {
-                        if (!provider) return;
-                        
-                        // Use setTimeout to defer the network detection
-                                                 setTimeout(async () => {
-                             try {
-                                 const network = await provider.getNetwork();
-                                const chainId = Number(network.chainId);
+                        const network = await provider.getNetwork();
+                        const chainId = Number(network.chainId);
 
-                                // Map chain IDs to their native symbols
-                                const chainToSymbol = {
-                                    1: 'ETH',      // Ethereum Mainnet
-                                    11155111: 'ETH', // Sepolia Testnet
-                                    137: 'MATIC',  // Polygon
-                                    56: 'BNB',     // BSC
-                                    43114: 'AVAX', // Avalanche
-                                    42161: 'ETH',  // Arbitrum
-                                    10: 'ETH',     // Optimism
-                                    8453: 'ETH',   // Base
-                                    324: 'ETH',    // zkSync Era
-                                    59144: 'ETH',  // Linea
-                                    100: 'XDAI',   // Gnosis Chain
-                                    42220: 'CELO', // Celo
-                                };
+                        const chainToSymbol = {
+                            1: 'ETH',      // Ethereum Mainnet
+                            11155111: 'ETH', // Sepolia Testnet
+                            137: 'MATIC',  // Polygon
+                            56: 'BNB',     // BSC
+                            43114: 'AVAX', // Avalanche
+                            42161: 'ETH',  // Arbitrum
+                            10: 'ETH',     // Optimism
+                            8453: 'ETH',   // Base
+                            324: 'ETH',    // zkSync Era
+                            59144: 'ETH',  // Linea
+                            100: 'XDAI',   // Gnosis Chain
+                            42220: 'CELO', // Celo
+                        };
 
-                                chainInfo.value = {
-                                    name: network.name,
-                                    chainId: chainId,
-                                    nativeSymbol: chainToSymbol[chainId] || 'ETH'
-                                };
-                            } catch (networkErr) {
-                                console.log('Network detection failed, using fallback info');
-                                // Keep the fallback info we already set
-                            }
-                        }, 1000);
-                        
+                        chainInfo.value = {
+                            name: network.name || 'Custom Network',
+                            chainId: chainId,
+                            nativeSymbol: chainToSymbol[chainId] || 'ETH'
+                        };
                     } catch (err) {
-                        console.log('Provider not ready, using fallback info');
-                        // Keep the fallback info we already set
+                        console.log('Network detection failed for custom RPC:', err.message);
+                        chainInfo.value = { name: 'Custom Network (Detection Failed)', chainId: 0, nativeSymbol: 'ETH' };
                     }
                 };
 
@@ -357,21 +470,96 @@
                     seedVisible.value = !seedVisible.value;
                 };
 
+                const toggleCurrentPrivateKeyVisibility = () => {
+                    isPrivateKeyVisible.value = !isPrivateKeyVisible.value;
+                };
+
+                const copyPrivateKey = async () => {
+                    if (!originalSeedInput.value) {
+                        showAlert('No seed phrase or private key to copy', 'warning');
+                        return;
+                    }
+                    try {
+                        await navigator.clipboard.writeText(originalSeedInput.value);
+                        const message = originalSeedInput.value.includes(' ') ? 'Seed phrase copied to clipboard!' : 'Private key copied to clipboard!';
+                        showAlert(message, 'success');
+                    } catch (err) {
+                        showAlert('Failed to copy to clipboard', 'warning');
+                    }
+                };
+
+                const clearSession = () => {
+                    wallets.value.length = 0;
+                    walletPrivateKeys.length = 0;
+                    accounts.value.length = 0;
+                    isWalletInitialized.value = false;
+                    selectedFromAddress.value = '';
+                    tokenInfo.value = null;
+                    txStatus.value = '';
+                    estimatedGas.value = '';
+                    error.value = '';
+                    walletStatus.value = '';
+                    seedPhrase.value = '';
+                    currentPrivateKey.value = '';
+                    originalSeedInput.value = '';
+                    isPrivateKeyVisible.value = false;
+                    updateWalletStateUI();
+                    showAlert('Wallet session cleared.', 'info');
+                };
+
                 const initializeWallet = async () => {
                     try {
                         if (!rpcEndpoint.value || !seedPhrase.value) {
                             throw new Error('Please provide both RPC endpoint and seed phrase');
                         }
 
-                        // Clear all existing state for fresh start
+                        isLoading.value = true;
                         allowedRpcEndpoint = rpcEndpoint.value;
-                        provider = new ethers.JsonRpcProvider(rpcEndpoint.value);
+                        
+                        // Create provider with network info for known networks to avoid detection
+                        if (selectedNetwork.value !== 'custom') {
+                            try {
+                                let networkInfo;
+                                switch (selectedNetwork.value) {
+                                    case 'ethereum':
+                                        networkInfo = ethers.Network.from('mainnet');
+                                        break;
+                                    case 'sepolia':
+                                        networkInfo = ethers.Network.from('sepolia');
+                                        break;
+                                    case 'base':
+                                        networkInfo = ethers.Network.from({ name: 'base', chainId: 8453 });
+                                        break;
+                                    case 'optimism':
+                                        networkInfo = ethers.Network.from({ name: 'optimism', chainId: 10 });
+                                        break;
+                                    case 'polygon':
+                                        networkInfo = ethers.Network.from({ name: 'matic', chainId: 137 });
+                                        break;
+                                    case 'arbitrum':
+                                        networkInfo = ethers.Network.from({ name: 'arbitrum', chainId: 42161 });
+                                        break;
+                                    default:
+                                        networkInfo = null;
+                                }
+                                
+                                if (networkInfo) {
+                                    provider = new ethers.JsonRpcProvider(rpcEndpoint.value, networkInfo, { staticNetwork: networkInfo });
+                                } else {
+                                    provider = new ethers.JsonRpcProvider(rpcEndpoint.value);
+                                }
+                            } catch (err) {
+                                console.log('Failed to create provider with network info, using default:', err.message);
+                                provider = new ethers.JsonRpcProvider(rpcEndpoint.value);
+                            }
+                        } else {
+                            provider = new ethers.JsonRpcProvider(rpcEndpoint.value);
+                        }
                         wallets.value.length = 0;
-                        walletPrivateKeys.length = 0; // Clear private keys
+                        walletPrivateKeys.length = 0;
                         accounts.value.length = 0;
                         isWalletInitialized.value = false;
                         
-                        // Clear any existing UI state
                         selectedFromAddress.value = '';
                         tokenInfo.value = null;
                         txStatus.value = '';
@@ -379,7 +567,9 @@
                         error.value = '';
                         walletStatus.value = 'Initializing wallet...';
 
-                        // Create fresh wallets connected to the current provider
+                        // Store the original input (seed phrase or private key)
+                        originalSeedInput.value = seedPhrase.value;
+                        
                         if (seedPhrase.value.includes(' ')) {
                             // Seed phrase
                             for (let i = 0; i < 5; i++) {
@@ -388,16 +578,17 @@
                                     ethers.Mnemonic.fromPhrase(seedPhrase.value),
                                     path
                                 );
-                                // Store private key separately for transactions (non-reactive)
                                 walletPrivateKeys.push(derivedWallet.privateKey);
                                 
-                                // Store wallet for UI display (address, balance)
                                 const connectedWallet = derivedWallet.connect(provider);
                                 wallets.value.push(connectedWallet);
                             }
+                            // Set the first wallet's private key as the current one
+                            currentPrivateKey.value = walletPrivateKeys[0];
                         } else {
                             // Private key
                             walletPrivateKeys.push(seedPhrase.value);
+                            currentPrivateKey.value = seedPhrase.value;
                             
                             const newWallet = new ethers.Wallet(seedPhrase.value, provider);
                             wallets.value.push(newWallet);
@@ -406,10 +597,14 @@
                         await refreshAccounts();
                         isWalletInitialized.value = true;
                         error.value = '';
-                        walletStatus.value = 'Wallet successfully initialized!';
+                        updateWalletStateUI();
+                        showAlert('Wallet initialized successfully!', 'success');
 
                     } catch (err) {
                         showError(err.message);
+                        showAlert('Failed to initialize wallet: ' + err.message, 'danger');
+                    } finally {
+                        isLoading.value = false;
                     }
                 };
 
@@ -496,21 +691,13 @@
                             });
                         }
 
-                        // Add 20% buffer
                         const gasWithBuffer = gasEstimate * 120n / 100n;
-
-                        // Get current gas price
                         const feeData = await provider.getFeeData();
                         const gasPrice = feeData.gasPrice;
-
-                        // Calculate total cost in wei
                         const totalCostWei = gasWithBuffer * gasPrice;
-
-                        // Convert to ETH and format to 6 decimal places
                         const totalCostEth = ethers.formatEther(totalCostWei);
                         const formattedCost = parseFloat(totalCostEth).toFixed(6);
 
-                        // Store both gas units and ETH cost
                         estimatedGas.value = {
                             gasUnits: gasWithBuffer.toString(),
                             ethCost: `${formattedCost}`
@@ -519,18 +706,15 @@
                         txStatus.value = '';
                     } catch (err) {
                         estimatedGas.value = '';
-                        if (txStatus.value === '') {  // Only show error if no other error is showing
+                        if (txStatus.value === '') {
                             txStatus.value = 'Gas estimation failed: ' + err.message;
                         }
                     }
                 };
 
-                // Watch for changes in relevant fields and update gas estimate
-                watch([currentTab, selectedFromAddress, toAddress, amount, tokenType, tokenAddress],
-                    async (newValues, oldValues) => {
-                        if (currentTab.value === 'Transfer') {
-                            await updateGasEstimate();
-                        }
+                watch([selectedFromAddress, toAddress, amount, tokenType, tokenAddress],
+                    async () => {
+                        await updateGasEstimate();
                     }
                 );
 
@@ -540,32 +724,27 @@
                             throw new Error('Please fill in all fields');
                         }
 
+                        isLoading.value = true;
                         const wallet = wallets.value.find(w => w.address === selectedFromAddress.value);
                         if (!wallet) throw new Error('Sender wallet not found');
                         
-                        // Find the wallet index and get the raw private key
                         const walletIndex = wallets.value.findIndex(w => w.address === selectedFromAddress.value);
                         if (walletIndex === -1) throw new Error('Wallet not found');
                         
-                        // Get the raw private key from the non-reactive array
                         const rawPrivateKey = walletPrivateKeys[walletIndex];
                         if (!rawPrivateKey) throw new Error('Private key not found');
                         
-                        // Create completely fresh wallet instance using raw private key
                         const connectedWallet = new ethers.Wallet(rawPrivateKey, provider);
 
                         let tx;
                         if (tokenType.value === 'native') {
-                            // Prepare transaction request
                             const txRequest = {
                                 to: toAddress.value,
                                 value: ethers.parseEther(amount.value.toString())
                             };
 
-                            // Estimate gas using RPC
                             try {
                                 const gasEstimate = await provider.estimateGas(txRequest);
-                                // Add 20% buffer to the estimate
                                 txRequest.gasLimit = gasEstimate * 120n / 100n;
                             } catch (error) {
                                 console.error('Gas estimation failed:', error);
@@ -578,19 +757,16 @@
                             const contract = new ethers.Contract(tokenAddress.value, ERC20_ABI, connectedWallet);
                             const decimals = await contract.decimals();
 
-                            // Prepare the contract call
                             const transferTx = await contract.transfer.populateTransaction(
                                 toAddress.value,
                                 ethers.parseUnits(amount.value.toString(), decimals)
                             );
 
-                            // Estimate gas using RPC
                             try {
                                 const gasEstimate = await provider.estimateGas({
                                     ...transferTx,
                                     from: connectedWallet.address
                                 });
-                                // Add 20% buffer to the estimate
                                 transferTx.gasLimit = gasEstimate * 120n / 100n;
                             } catch (error) {
                                 console.error('Gas estimation failed:', error);
@@ -607,6 +783,8 @@
 
                     } catch (err) {
                         txStatus.value = 'Transaction failed: ' + err.message;
+                    } finally {
+                        isLoading.value = false;
                     }
                 };
 
@@ -614,33 +792,67 @@
                     try {
                         const wallet = ethers.Wallet.createRandom();
                         seedPhrase.value = wallet.privateKey;
-                        walletStatus.value = `New wallet generated! Address: ${wallet.address}`;
                         
-                        // Auto-initialize the wallet after generation
                         await initializeWallet();
                     } catch (err) {
                         showError('Failed to generate wallet: ' + err.message);
+                        showAlert('Failed to generate wallet: ' + err.message, 'danger');
                     }
                 };
 
                 const copyAddress = async (address) => {
                     try {
                         await navigator.clipboard.writeText(address);
-                        copiedAddress.value = address;
-                        
-                        // Clear the notification after 2 seconds
-                        setTimeout(() => {
-                            copiedAddress.value = null;
-                        }, 2000);
+                        showAlert('Address copied to clipboard!', 'success');
                     } catch (err) {
                         showError('Failed to copy address to clipboard');
+                        showAlert('Failed to copy address to clipboard', 'warning');
                     }
                 };
 
                 const getQRCodeUrl = (address) => {
-                    // Encode address to base64
                     const base64Address = btoa(address);
                     return `https://qrcode.sanjaysingh.net/?text=${base64Address}`;
+                };
+
+                const generateQRCode = (address, elementRef) => {
+                    if (!elementRef || !address) return;
+                    
+                    // Clear any existing QR code
+                    elementRef.innerHTML = '';
+                    
+                    try {
+                        // Ensure QRCode library is available
+                        if (typeof QRCode === 'undefined') {
+                            console.error("QRCode library not loaded");
+                            elementRef.textContent = 'Error: QR Code library not loaded.';
+                            return;
+                        }
+                        
+                        new QRCode(elementRef, {
+                            text: address,
+                            width: 256,
+                            height: 256,
+                            colorDark: "#000000",
+                            colorLight: "#ffffff",
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+                    } catch (e) {
+                        console.error("Error generating QR code:", e);
+                        elementRef.textContent = 'Error generating QR code.';
+                    }
+                };
+
+                const generateAllQRCodes = () => {
+                    // Use nextTick to ensure DOM is updated
+                    Vue.nextTick(() => {
+                        accounts.value.forEach(account => {
+                            const qrElement = document.querySelector(`[data-qr-address="${account.address}"]`);
+                            if (qrElement) {
+                                generateQRCode(account.address, qrElement);
+                            }
+                        });
+                    });
                 };
 
                 const updateRpcEndpoint = async () => {
@@ -649,18 +861,36 @@
                         rpcEndpoint.value = network.rpcUrl;
                     }
                     
-                    // If wallet is already initialized, reinitialize it with the new network
+                    networkStatusText.value = `Selected Network: ${getNetworkName()}`;
+                    networkStatusClass.value = 'form-text text-primary d-block mt-2';
+                    
                     if (provider && wallets.value.length > 0 && seedPhrase.value) {
                         try {
-                            walletStatus.value = 'Switching network...';
                             await initializeWallet();
                         } catch (err) {
                             showError('Failed to switch network: ' + err.message);
+                            showAlert('Failed to switch network: ' + err.message, 'danger');
                         }
                     }
                 };
 
                 return {
+                    // Theme and UI state
+                    currentTheme,
+                    isLoading,
+                    alerts,
+                    showWalletManagement,
+                    showLoadedWalletDetails,
+                    networkStatusText,
+                    networkStatusClass,
+                    
+                    // Private key state
+                    isPrivateKeyVisible,
+                    currentPrivateKey,
+                    originalSeedInput,
+                    currentPrivateKeyDisplay,
+                    
+                    // Original state
                     currentTab,
                     tabs,
                     selectedNetwork,
@@ -681,19 +911,27 @@
                     chainInfo,
                     tokenInfo,
                     isWalletInitialized,
-                    copiedAddress,
+                    
+                    // Methods
+                    toggleTheme,
+                    showAlert,
+                    dismissAlert,
                     toggleSeedVisibility,
+                    toggleCurrentPrivateKeyVisibility,
+                    copyPrivateKey,
+                    clearSession,
                     initializeWallet,
                     updateTokenBalance,
                     sendTransaction,
                     generateNewWallet,
                     copyAddress,
                     getQRCodeUrl,
+                    generateQRCode,
+                    generateAllQRCodes,
                     updateRpcEndpoint
                 };
             }
         }).mount('#app');
     </script>
 </body>
-
 </html>
