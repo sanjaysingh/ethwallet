@@ -44,12 +44,11 @@ body {
     width: auto;
     max-width: 90%;
     pointer-events: none; /* Allow clicks to pass through container */
-    min-height: 0; /* Prevent layout shifts */
 }
 
 #alert-placeholder .alert {
     pointer-events: auto; /* Re-enable clicks on actual alerts */
-    margin: 0 auto; /* Center the alert */
+    margin: 0;
     display: block;
 }
 
@@ -71,6 +70,14 @@ body {
      z-index: 3;
 }
 
+/* Address display in input groups - prevent overflow */
+.input-group .address-display {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+}
+
 /* Theme Toggle */
 .theme-toggle {
     cursor: pointer;
@@ -82,15 +89,14 @@ body {
     display: none !important;
 }
 
-/* Alert transitions - improved to prevent position shifts */
+/* Alert transitions - simple and stable */
 .alert-fade-enter-active, .alert-fade-leave-active {
-    transition: opacity 0.2s ease, transform 0.2s ease;
-    position: relative;
+    transition: all 0.25s ease;
 }
 
 .alert-fade-enter-from, .alert-fade-leave-to {
     opacity: 0;
-    transform: translateY(-5px) scale(0.95);
+    transform: translateY(-10px) scale(0.98);
 }
 
 .alert-fade-enter-to, .alert-fade-leave-from {
@@ -287,31 +293,32 @@ code {
     }
     
     .address-display {
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
+        word-break: break-all;
+        line-height: 1.2;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
     
     .balance-display {
         font-size: 1rem;
     }
     
-    /* Stack input group buttons on very small screens */
+    /* Keep input group on one line even on very small screens */
     .input-group {
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
     
     .input-group .form-control {
-        flex: 1 1 100%;
-        margin-bottom: 0.5rem;
+        flex: 1 1 auto;
+        min-width: 0; /* Allow shrinking */
+        font-size: 0.75rem; /* Smaller font for very small screens */
     }
     
     .input-group .btn {
         flex: 0 0 auto;
-        margin-right: 0.25rem;
-        margin-bottom: 0.5rem;
-    }
-    
-    .input-group .btn:last-child {
-        margin-right: 0;
+        padding: 0.75rem 0.5rem; /* Reduce horizontal padding */
+        min-width: 40px; /* Minimum touch target */
     }
     
     .qr-code-container canvas,
