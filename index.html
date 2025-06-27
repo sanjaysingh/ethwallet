@@ -138,7 +138,7 @@
                               <!-- Account Cards -->
                               <div v-for="account in accounts" :key="account.address" class="mb-3">
                                  <div class="input-group">
-                                      <span class="form-control address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{ chainInfo?.nativeSymbol }})</span>
+                                      <span class="form-control address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
                                       <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
                                           <i class="bi bi-clipboard"></i>
                                      </button>
@@ -159,7 +159,7 @@
                                  <label class="form-label">From Address:</label>
                                  <select class="form-select" v-model="selectedFromAddress" @change="updateTokenBalance">
                                     <option v-for="account in accounts" :key="account.address" :value="account.address">
-                                        {{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{chainInfo.nativeSymbol}})
+                                        {{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{chainInfo.nativeSymbol}})
                                     </option>
                                 </select>
                              </div>
@@ -222,7 +222,7 @@
                                 <h5 class="card-title mb-3"><i class="bi bi-arrow-down-circle me-1"></i> Receive {{ chainInfo?.nativeSymbol || 'ETH' }}</h5>
                                 <p>Share this address or QR code to receive funds:</p>
                                                                  <div class="input-group mb-3 w-auto mx-auto" style="max-width: 500px;">
-                                     <span class="form-control form-control-lg address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(4))) }} {{ chainInfo?.nativeSymbol }})</span>
+                                     <span class="form-control form-control-lg address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
                                       <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
                                           <i class="bi bi-clipboard"></i>
                                       </button>
