@@ -78,6 +78,27 @@ body {
     min-width: 0;
 }
 
+/* Copy button animation */
+.btn {
+    transition: all 0.3s ease;
+}
+
+.btn i {
+    transition: all 0.3s ease;
+}
+
+.btn i.bi-check-lg {
+    transform: scale(1.2);
+    font-weight: bold;
+}
+
+/* Success button styling for copy feedback */
+.btn-success {
+    border-color: var(--bs-success) !important;
+    background-color: var(--bs-success) !important;
+    color: white !important;
+}
+
 /* Theme Toggle */
 .theme-toggle {
     cursor: pointer;

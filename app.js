@@ -127,6 +127,12 @@ createApp({
             return `${originalSeedInput.value.substring(0, 6)}...${originalSeedInput.value.substring(originalSeedInput.value.length - 6)}`;
         });
 
+        // Utility function to format addresses in short format
+        const formatAddressShort = (address) => {
+            if (!address || address.length < 10) return address;
+            return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+        };
+
         // Alert system
         let currentAlertTimeout = null;
         
@@ -235,15 +241,34 @@ createApp({
             isPrivateKeyVisible.value = !isPrivateKeyVisible.value;
         };
 
-        const copyPrivateKey = async () => {
+        const copyPrivateKey = async (event) => {
             if (!originalSeedInput.value) {
                 showAlert('No seed phrase or private key to copy', 'warning');
                 return;
             }
             try {
                 await navigator.clipboard.writeText(originalSeedInput.value);
-                const message = originalSeedInput.value.includes(' ') ? 'Seed phrase copied to clipboard!' : 'Private key copied to clipboard!';
-                showAlert(message, 'success');
+                
+                // Show check mark animation on the button
+                const button = event.target.closest('button');
+                if (button) {
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        // Store original classes
+                        const originalClasses = icon.className;
+                        const originalButtonClasses = button.className;
+                        
+                        // Change to check mark and success styling
+                        icon.className = 'bi bi-check-lg';
+                        button.className = button.className.replace('btn-outline-secondary', 'btn-success');
+                        
+                        // Restore original styling after 2 seconds
+                        setTimeout(() => {
+                            icon.className = originalClasses;
+                            button.className = originalButtonClasses;
+                        }, 2000);
+                    }
+                }
             } catch (err) {
                 showAlert('Failed to copy to clipboard', 'warning');
             }
@@ -388,6 +413,11 @@ createApp({
                     });
                 }
             }
+            
+            // Auto-select the first address if none is selected
+            if (accounts.value.length > 0 && !selectedFromAddress.value) {
+                selectedFromAddress.value = accounts.value[0].address;
+            }
         };
 
         const updateTokenBalance = async () => {
@@ -508,10 +538,30 @@ createApp({
             }
         };
 
-        const copyAddress = async (address) => {
+        const copyAddress = async (address, event) => {
             try {
                 await navigator.clipboard.writeText(address);
-                showAlert('Address copied to clipboard!', 'success');
+                
+                // Show check mark animation on the button
+                const button = event.target.closest('button');
+                if (button) {
+                    const icon = button.querySelector('i');
+                    if (icon) {
+                        // Store original classes
+                        const originalClasses = icon.className;
+                        const originalButtonClasses = button.className;
+                        
+                        // Change to check mark and success styling
+                        icon.className = 'bi bi-check-lg';
+                        button.className = button.className.replace('btn-outline-secondary', 'btn-success');
+                        
+                        // Restore original styling after 2 seconds
+                        setTimeout(() => {
+                            icon.className = originalClasses;
+                            button.className = originalButtonClasses;
+                        }, 2000);
+                    }
+                }
             } catch (err) {
                 showError('Failed to copy address to clipboard');
                 showAlert('Failed to copy address to clipboard', 'warning');
@@ -637,7 +687,8 @@ createApp({
             getQRCodeUrl,
             generateQRCode,
             generateAllQRCodes,
-            updateRpcEndpoint
+            updateRpcEndpoint,
+            formatAddressShort
         };
     }
 }).mount('#app');
