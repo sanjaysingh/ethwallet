@@ -71,8 +71,12 @@ createApp({
         const toAddress = ref('');
         const amount = ref('');
         const txStatus = ref('');
+        const txStatusType = ref(''); // 'success', 'error', or ''
         const estimatedGas = ref('');
         const tokenInfo = ref(null);
+        
+        // Timeout for auto-clearing error messages
+        let txStatusTimeout = null;
 
         // Bootstrap styling state
         const currentTheme = ref('dark');
@@ -282,6 +286,11 @@ createApp({
             selectedFromAddress.value = '';
             tokenInfo.value = null;
             txStatus.value = '';
+            txStatusType.value = '';
+            if (txStatusTimeout) {
+                clearTimeout(txStatusTimeout);
+                txStatusTimeout = null;
+            }
             estimatedGas.value = '';
             error.value = '';
             walletStatus.value = '';
@@ -350,6 +359,11 @@ createApp({
                 selectedFromAddress.value = '';
                 tokenInfo.value = null;
                 txStatus.value = '';
+                txStatusType.value = '';
+                if (txStatusTimeout) {
+                    clearTimeout(txStatusTimeout);
+                    txStatusTimeout = null;
+                }
                 estimatedGas.value = '';
                 error.value = '';
                 walletStatus.value = 'Initializing wallet...';
@@ -460,12 +474,19 @@ createApp({
 
         const sendTransaction = async () => {
             try {
+                // Clear any existing timeout
+                if (txStatusTimeout) {
+                    clearTimeout(txStatusTimeout);
+                    txStatusTimeout = null;
+                }
+                
                 if (!selectedFromAddress.value || !toAddress.value || !amount.value) {
                     throw new Error('Please fill in all required fields');
                 }
 
                 isLoading.value = true;
                 txStatus.value = 'Preparing transaction...';
+                txStatusType.value = 'success';
 
                 const walletIndex = accounts.value.find(acc => acc.address === selectedFromAddress.value)?.index;
                 if (walletIndex === undefined) {
@@ -515,12 +536,21 @@ createApp({
                 }
 
                 txStatus.value = `Transaction sent! Hash: ${tx.hash}`;
+                txStatusType.value = 'success';
                 await tx.wait();
                 txStatus.value += ' (Confirmed)';
                 await refreshAccounts();
 
             } catch (err) {
                 txStatus.value = 'Transaction failed: ' + err.message;
+                txStatusType.value = 'error';
+                
+                // Auto-clear error messages after 3 seconds
+                txStatusTimeout = setTimeout(() => {
+                    txStatus.value = '';
+                    txStatusType.value = '';
+                    txStatusTimeout = null;
+                }, 3000);
             } finally {
                 isLoading.value = false;
             }
@@ -678,6 +708,7 @@ createApp({
             toAddress,
             amount,
             txStatus,
+            txStatusType,
             estimatedGas,
             chainInfo,
             tokenInfo,

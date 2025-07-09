@@ -204,7 +204,7 @@
                                 <i class="bi bi-send-check me-1"></i> Send Transaction
                              </button>
 
-                             <div v-if="txStatus" class="alert alert-success mt-3">
+                             <div v-if="txStatus" :class="['alert', txStatusType === 'error' ? 'alert-danger' : 'alert-success', 'mt-3']">
                                 <strong>Transaction Status:</strong> {{ txStatus }}
                              </div>
                         </div>
