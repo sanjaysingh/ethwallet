@@ -526,10 +526,22 @@ createApp({
             }
         };
 
-        const generateNewWallet = async () => {
+        const generatePrivateKeyWallet = async () => {
             try {
                 const wallet = ethers.Wallet.createRandom();
                 seedPhrase.value = wallet.privateKey;
+                
+                await initializeWallet();
+            } catch (err) {
+                showError('Failed to generate wallet: ' + err.message);
+                showAlert('Failed to generate wallet: ' + err.message, 'danger');
+            }
+        };
+
+        const generateSeedPhraseWallet = async () => {
+            try {
+                const wallet = ethers.Wallet.createRandom();
+                seedPhrase.value = wallet.mnemonic.phrase;
                 
                 await initializeWallet();
             } catch (err) {
@@ -682,7 +694,8 @@ createApp({
             initializeWallet,
             updateTokenBalance,
             sendTransaction,
-            generateNewWallet,
+            generatePrivateKeyWallet,
+            generateSeedPhraseWallet,
             copyAddress,
             getQRCodeUrl,
             generateQRCode,

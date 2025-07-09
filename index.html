@@ -90,7 +90,8 @@
                                <!-- Create/Import Section -->
                                 <div v-if="showWalletManagement">
                                     <div class="mb-3">
-                                        <button class="btn btn-primary" @click="generateNewWallet"><i class="bi bi-plus-circle me-1"></i> Generate New Wallet</button>
+                                        <button class="btn btn-primary me-2" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
+                                        <button class="btn btn-primary" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
                                     </div>
                                     <div class="mb-3">
                                         <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
