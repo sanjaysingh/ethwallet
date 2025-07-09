@@ -379,13 +379,13 @@ createApp({
                             ethers.Mnemonic.fromPhrase(seedPhrase.value),
                             path
                         );
-                        const connectedWallet = derivedWallet.connect(provider);
-                        wallets.value.push(connectedWallet);
+                        // Store the base wallet without provider connection
+                        wallets.value.push(derivedWallet);
                         walletPrivateKeys.push(derivedWallet.privateKey);
                     }
                 } else {
-                    // Private key
-                    const wallet = new ethers.Wallet(seedPhrase.value, provider);
+                    // Private key - create base wallet without provider connection
+                    const wallet = new ethers.Wallet(seedPhrase.value);
                     wallets.value.push(wallet);
                     walletPrivateKeys.push(wallet.privateKey);
                 }
@@ -484,6 +484,10 @@ createApp({
                     throw new Error('Please fill in all required fields');
                 }
 
+                if (!provider) {
+                    throw new Error('Provider not initialized. Please check your network connection.');
+                }
+
                 isLoading.value = true;
                 txStatus.value = 'Preparing transaction...';
                 txStatusType.value = 'success';
@@ -493,7 +497,12 @@ createApp({
                     throw new Error('Selected address not found in wallets');
                 }
 
-                const connectedWallet = wallets.value[walletIndex];
+                // Create a fresh wallet instance with the current provider to avoid AbstractProvider errors
+                const privateKey = walletPrivateKeys[walletIndex];
+                if (!privateKey) {
+                    throw new Error('Private key not found for selected wallet');
+                }
+                const connectedWallet = new ethers.Wallet(privateKey, provider);
 
                 let tx;
                 if (tokenType.value === 'native') {
