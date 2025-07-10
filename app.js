@@ -116,6 +116,15 @@ createApp({
             }
         });
 
+        // Watch for changes in transaction details to estimate gas
+        watch([selectedFromAddress, toAddress, amount, tokenType, tokenAddress], () => {
+            if (isWalletInitialized.value && selectedFromAddress.value && toAddress.value && amount.value) {
+                estimateGas();
+            } else {
+                estimatedGas.value = '';
+            }
+        });
+
         // Utility Functions
         const getNetworkName = () => {
             const network = availableNetworks.value.find(n => n.id === selectedNetwork.value);
@@ -472,6 +481,63 @@ createApp({
             }
         };
 
+        const estimateGas = async () => {
+            if (!selectedFromAddress.value || !toAddress.value || !amount.value || !provider) {
+                estimatedGas.value = '';
+                return;
+            }
+
+            try {
+                let gasEstimate;
+                
+                if (tokenType.value === 'native') {
+                    // Native token transfer
+                    const txRequest = {
+                        from: selectedFromAddress.value,
+                        to: toAddress.value,
+                        value: ethers.parseEther(amount.value.toString())
+                    };
+                    gasEstimate = await provider.estimateGas(txRequest);
+                } else {
+                    // ERC20 token transfer
+                    if (!tokenAddress.value) {
+                        estimatedGas.value = '';
+                        return;
+                    }
+                    
+                    const contract = new ethers.Contract(tokenAddress.value, ERC20_ABI, provider);
+                    const decimals = await contract.decimals();
+                    
+                    const transferData = contract.interface.encodeFunctionData('transfer', [
+                        toAddress.value,
+                        ethers.parseUnits(amount.value.toString(), decimals)
+                    ]);
+                    
+                    gasEstimate = await provider.estimateGas({
+                        from: selectedFromAddress.value,
+                        to: tokenAddress.value,
+                        data: transferData
+                    });
+                }
+
+                // Add 20% buffer for safety
+                const gasWithBuffer = gasEstimate * 120n / 100n;
+                
+                // Get current gas price
+                const gasPrice = await provider.getFeeData();
+                const gasCost = gasWithBuffer * gasPrice.gasPrice;
+                
+                estimatedGas.value = {
+                    gasLimit: gasWithBuffer.toString(),
+                    gasPrice: ethers.formatUnits(gasPrice.gasPrice, 'gwei'),
+                    ethCost: ethers.formatEther(gasCost)
+                };
+            } catch (err) {
+                console.error('Gas estimation failed:', err);
+                estimatedGas.value = '';
+            }
+        };
+
         const sendTransaction = async () => {
             try {
                 // Clear any existing timeout
@@ -497,27 +563,32 @@ createApp({
                     throw new Error('Selected address not found in wallets');
                 }
 
-                // Create a fresh wallet instance with the current provider to avoid AbstractProvider errors
+                // Get the private key and create a fresh wallet instance with the provider
                 const privateKey = walletPrivateKeys[walletIndex];
                 if (!privateKey) {
                     throw new Error('Private key not found for selected wallet');
                 }
+                
+                // Create a fresh wallet instance with the provider
                 const connectedWallet = new ethers.Wallet(privateKey, provider);
+
+                // Use pre-calculated gas estimate if available, otherwise calculate it
+                if (!estimatedGas.value) {
+                    txStatus.value = 'Estimating gas...';
+                    await estimateGas();
+                    
+                    if (!estimatedGas.value) {
+                        throw new Error('Failed to estimate gas. Please check if you have sufficient funds and valid transaction details.');
+                    }
+                }
 
                 let tx;
                 if (tokenType.value === 'native') {
                     const txRequest = {
                         to: toAddress.value,
-                        value: ethers.parseEther(amount.value.toString())
+                        value: ethers.parseEther(amount.value.toString()),
+                        gasLimit: BigInt(estimatedGas.value.gasLimit)
                     };
-
-                    try {
-                        const gasEstimate = await provider.estimateGas(txRequest);
-                        txRequest.gasLimit = gasEstimate * 120n / 100n;
-                    } catch (error) {
-                        console.error('Gas estimation failed:', error);
-                        throw new Error('Failed to estimate gas. Please check if you have sufficient funds for gas.');
-                    }
 
                     tx = await connectedWallet.sendTransaction(txRequest);
                 } else {
@@ -530,17 +601,7 @@ createApp({
                         ethers.parseUnits(amount.value.toString(), decimals)
                     );
 
-                    try {
-                        const gasEstimate = await provider.estimateGas({
-                            ...transferTx,
-                            from: connectedWallet.address
-                        });
-                        transferTx.gasLimit = gasEstimate * 120n / 100n;
-                    } catch (error) {
-                        console.error('Gas estimation failed:', error);
-                        throw new Error('Failed to estimate gas. Please check if you have sufficient funds and the token contract is valid.');
-                    }
-
+                    transferTx.gasLimit = BigInt(estimatedGas.value.gasLimit);
                     tx = await connectedWallet.sendTransaction(transferTx);
                 }
 
@@ -554,12 +615,12 @@ createApp({
                 txStatus.value = 'Transaction failed: ' + err.message;
                 txStatusType.value = 'error';
                 
-                // Auto-clear error messages after 3 seconds
+                // Auto-clear error messages after 10 seconds
                 txStatusTimeout = setTimeout(() => {
                     txStatus.value = '';
                     txStatusType.value = '';
                     txStatusTimeout = null;
-                }, 3000);
+                }, 10000);
             } finally {
                 isLoading.value = false;
             }
@@ -733,6 +794,7 @@ createApp({
             clearSession,
             initializeWallet,
             updateTokenBalance,
+            estimateGas,
             sendTransaction,
             generatePrivateKeyWallet,
             generateSeedPhraseWallet,

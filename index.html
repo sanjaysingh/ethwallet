@@ -200,9 +200,14 @@
                                 </div>
                              </div>
 
-                             <button class="btn btn-success" @click="sendTransaction" :disabled="isLoading">
-                                <i class="bi bi-send-check me-1"></i> Send Transaction
-                             </button>
+                             <div class="d-flex gap-2">
+                                <button class="btn btn-outline-info" @click="estimateGas" :disabled="isLoading || !selectedFromAddress || !toAddress || !amount">
+                                    <i class="bi bi-calculator me-1"></i> Estimate Gas
+                                </button>
+                                <button class="btn btn-success" @click="sendTransaction" :disabled="isLoading">
+                                    <i class="bi bi-send-check me-1"></i> Send Transaction
+                                </button>
+                             </div>
 
                              <div v-if="txStatus" :class="['alert', txStatusType === 'error' ? 'alert-danger' : 'alert-success', 'mt-3']">
                                 <strong>Transaction Status:</strong> {{ txStatus }}
