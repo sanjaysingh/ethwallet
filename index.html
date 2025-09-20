@@ -90,15 +90,15 @@
                                <!-- Create/Import Section -->
                                 <div v-if="showWalletManagement">
                                     <div class="mb-3">
-                                        <button class="btn btn-primary me-2" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
-                                        <button class="btn btn-primary" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
+                                        <button class="btn btn-primary me-2" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Private Key Wallet</button>
+                                        <button class="btn btn-primary" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seed Phrase Wallet</button>
                                     </div>
                                     <div class="mb-3">
                                         <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
                                          <div class="input-group">
                                              <input :type="seedVisible ? 'text' : 'password'" class="form-control" id="seed-input" 
                                                     placeholder="Enter seed phrase or private key" v-model="seedPhrase" @keydown.enter="initializeWallet">
-                                             <button class="btn btn-outline-secondary" type="button" @click="toggleSeedVisibility" title="Show/Hide Key">
+                                             <button class="btn btn-outline-secondary" type="button" @click="toggleSeedVisibility" title="Show/Hide Key" aria-label="Toggle seed phrase visibility">
                                                 <i :class="['bi', seedVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
                                              </button>
                                              <button class="btn btn-success" type="button" @click="initializeWallet" :disabled="!seedPhrase" title="Import Wallet">
@@ -114,10 +114,10 @@
                                          <label class="form-label">Current Session Key:</label>
                                          <div class="input-group">
                                              <span class="form-control private-key-display" :class="{'text-muted': !isPrivateKeyVisible}">{{ currentPrivateKeyDisplay }}</span>
-                                             <button class="btn btn-outline-secondary" type="button" @click="toggleCurrentPrivateKeyVisibility" title="Show/Hide Key">
+                                             <button class="btn btn-outline-secondary" type="button" @click="toggleCurrentPrivateKeyVisibility" title="Show/Hide Key" aria-label="Toggle private key visibility">
                                                  <i :class="['bi', isPrivateKeyVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
                                              </button>
-                                             <button class="btn btn-outline-secondary" type="button" @click="copyPrivateKey($event)" title="Copy Private Key">
+                                             <button class="btn btn-outline-secondary" type="button" @click="copyPrivateKey($event)" title="Copy Private Key" aria-label="Copy private key to clipboard">
                                                  <i class="bi bi-clipboard"></i>
                                             </button>
                                          </div>
@@ -140,7 +140,7 @@
                               <div v-for="account in accounts" :key="account.address" class="mb-3">
                                  <div class="input-group">
                                       <span class="form-control address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
-                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
+                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address" aria-label="Copy wallet address to clipboard">
                                           <i class="bi bi-clipboard"></i>
                                      </button>
                                  </div>
@@ -157,8 +157,8 @@
                              <h5 class="card-title mb-3"><i class="bi bi-send-fill me-1"></i> Send Transaction</h5>
 
                              <div class="mb-3">
-                                 <label class="form-label">From Address:</label>
-                                 <select class="form-select" v-model="selectedFromAddress" @change="updateTokenBalance">
+                                 <label for="from-address-select" class="form-label">From Address:</label>
+                                 <select class="form-select" id="from-address-select" v-model="selectedFromAddress" @change="updateTokenBalance">
                                     <option v-for="account in accounts" :key="account.address" :value="account.address">
                                         {{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{chainInfo.nativeSymbol}})
                                     </option>
@@ -166,17 +166,17 @@
                              </div>
 
                              <div class="mb-3">
-                                 <label class="form-label">Token Type:</label>
-                                 <select class="form-select" v-model="tokenType">
+                                 <label for="token-type-select" class="form-label">Token Type:</label>
+                                 <select class="form-select" id="token-type-select" v-model="tokenType">
                                     <option :value="'native'">{{ chainInfo?.nativeSymbol || 'Native Token' }}</option>
                                     <option value="erc20">ERC20 Token</option>
                                 </select>
                              </div>
 
                              <div v-if="tokenType === 'erc20'" class="mb-3">
-                                <label class="form-label">ERC20 Token Contract Address:</label>
+                                <label for="token-address-input" class="form-label">ERC20 Token Contract Address:</label>
                                 <div class="input-group">
-                                    <input class="form-control" v-model="tokenAddress" placeholder="Enter token contract address" @input="updateTokenBalance">
+                                    <input class="form-control" id="token-address-input" v-model="tokenAddress" placeholder="Enter token contract address" @input="updateTokenBalance">
                                     <div v-if="tokenInfo" class="input-group-text">
                                         Balance: {{ tokenInfo.balance }} {{ tokenInfo.symbol }}
                                     </div>
@@ -229,7 +229,7 @@
                                 <p>Share this address or QR code to receive funds:</p>
                                                                  <div class="input-group mb-3 w-auto mx-auto" style="max-width: 500px;">
                                      <span class="form-control form-control-lg address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
-                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
+                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address" aria-label="Copy wallet address to clipboard">
                                           <i class="bi bi-clipboard"></i>
                                       </button>
                                  </div>

@@ -137,12 +137,16 @@ createApp({
             if (isPrivateKeyVisible.value) {
                 return originalSeedInput.value;
             }
+            // Handle different input lengths gracefully
+            if (originalSeedInput.value.length < 12) {
+                return `${originalSeedInput.value.substring(0, 3)}...${originalSeedInput.value.substring(originalSeedInput.value.length - 3)}`;
+            }
             return `${originalSeedInput.value.substring(0, 6)}...${originalSeedInput.value.substring(originalSeedInput.value.length - 6)}`;
         });
 
         // Utility function to format addresses in short format
         const formatAddressShort = (address) => {
-            if (!address || address.length < 10) return address;
+            if (!address || typeof address !== 'string' || address.length < 10) return address || '';
             return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
         };
 
@@ -697,6 +701,11 @@ createApp({
                     console.error("QRCode library not loaded");
                     elementRef.textContent = 'Error: QR Code library not loaded.';
                     return;
+                }
+                
+                // Validate address format (basic check for Ethereum addresses)
+                if (!address.match(/^0x[a-fA-F0-9]{40}$/)) {
+                    console.warn("Invalid address format for QR code:", address);
                 }
                 
                 new QRCode(elementRef, {
