@@ -97,12 +97,48 @@ createApp({
         const isWalletInitialized = ref(false);
         let allowedRpcEndpoint = null;
 
+        // Deep linking helper functions
+        const getNetworkFromUrl = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('network');
+        };
+
+        const updateUrlWithNetwork = (networkId) => {
+            const url = new URL(window.location.href);
+            if (networkId && networkId !== 'base') {
+                // Only add to URL if not the default network
+                url.searchParams.set('network', networkId);
+            } else {
+                // Remove param if it's the default network
+                url.searchParams.delete('network');
+            }
+            // Update URL without reloading the page
+            window.history.replaceState({}, '', url.toString());
+        };
+
         // Lifecycle
         onMounted(() => {
             // Initialize theme
             document.documentElement.setAttribute('data-bs-theme', currentTheme.value);
             updateWalletStateUI();
-            networkStatusText.value = `Selected Network: ${getNetworkName()} (Default)`;
+            
+            // Check for network in URL (deep linking support)
+            // Only support known networks, ignore unknown network values
+            const urlNetwork = getNetworkFromUrl();
+            let validNetworkFromUrl = false;
+            
+            if (urlNetwork) {
+                // Only apply if it's a known network (excluding 'custom')
+                const network = availableNetworks.value.find(n => n.id === urlNetwork && n.id !== 'custom');
+                if (network) {
+                    validNetworkFromUrl = true;
+                    selectedNetwork.value = urlNetwork;
+                    rpcEndpoint.value = network.rpcUrl;
+                }
+                // If unknown network in URL, silently fall back to default (base)
+            }
+            
+            networkStatusText.value = `Selected Network: ${getNetworkName()}${validNetworkFromUrl ? '' : ' (Default)'}`;
             networkStatusClass.value = 'form-text text-primary d-block mt-2';
             
             // Listen for Receive tab being shown to generate QR codes
@@ -730,6 +766,9 @@ createApp({
             if (network && network.id !== 'custom') {
                 rpcEndpoint.value = network.rpcUrl;
             }
+            
+            // Update URL for deep linking support
+            updateUrlWithNetwork(selectedNetwork.value);
             
             networkStatusText.value = `Selected Network: ${getNetworkName()}`;
             networkStatusClass.value = 'form-text text-primary d-block mt-2';
