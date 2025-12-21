@@ -123,20 +123,22 @@ createApp({
             updateWalletStateUI();
             
             // Check for network in URL (deep linking support)
+            // Only support known networks, ignore unknown network values
             const urlNetwork = getNetworkFromUrl();
+            let validNetworkFromUrl = false;
+            
             if (urlNetwork) {
-                const networkExists = availableNetworks.value.some(n => n.id === urlNetwork);
-                if (networkExists) {
+                // Only apply if it's a known network (excluding 'custom')
+                const network = availableNetworks.value.find(n => n.id === urlNetwork && n.id !== 'custom');
+                if (network) {
+                    validNetworkFromUrl = true;
                     selectedNetwork.value = urlNetwork;
-                    // Update RPC endpoint for the selected network
-                    const network = availableNetworks.value.find(n => n.id === urlNetwork);
-                    if (network && network.id !== 'custom') {
-                        rpcEndpoint.value = network.rpcUrl;
-                    }
+                    rpcEndpoint.value = network.rpcUrl;
                 }
+                // If unknown network in URL, silently fall back to default (base)
             }
             
-            networkStatusText.value = `Selected Network: ${getNetworkName()}${urlNetwork ? '' : ' (Default)'}`;
+            networkStatusText.value = `Selected Network: ${getNetworkName()}${validNetworkFromUrl ? '' : ' (Default)'}`;
             networkStatusClass.value = 'form-text text-primary d-block mt-2';
             
             // Listen for Receive tab being shown to generate QR codes
