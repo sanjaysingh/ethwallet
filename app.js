@@ -55,6 +55,11 @@ createApp({
                 rpcUrl: 'https://arb1.arbitrum.io/rpc'
             },
             {
+                id: 'robinhood-mainnet',
+                name: 'Robinhood Chain',
+                rpcUrl: 'https://rpc.mainnet.chain.robinhood.com'
+            },
+            {
                 id: 'custom',
                 name: 'Custom',
                 rpcUrl: ''
@@ -232,7 +237,8 @@ createApp({
                     'base': { name: 'Base', chainId: 8453, nativeSymbol: 'ETH' },
                     'optimism': { name: 'Optimism', chainId: 10, nativeSymbol: 'ETH' },
                     'polygon': { name: 'Polygon', chainId: 137, nativeSymbol: 'MATIC' },
-                    'arbitrum': { name: 'Arbitrum One', chainId: 42161, nativeSymbol: 'ETH' }
+                    'arbitrum': { name: 'Arbitrum One', chainId: 42161, nativeSymbol: 'ETH' },
+                    'robinhood-mainnet': { name: 'Robinhood Chain', chainId: 4663, nativeSymbol: 'ETH' }
                 };
                 
                 chainInfo.value = networkConfig[selectedNetwork.value] || { name: 'Unknown Chain', chainId: 0, nativeSymbol: 'ETH' };
@@ -262,6 +268,7 @@ createApp({
                     59144: 'ETH',  // Linea
                     100: 'XDAI',   // Gnosis Chain
                     42220: 'CELO', // Celo
+                    4663: 'ETH',   // Robinhood Chain
                 };
 
                 chainInfo.value = {
@@ -378,6 +385,9 @@ createApp({
                                 break;
                             case 'arbitrum':
                                 networkInfo = ethers.Network.from({ name: 'arbitrum', chainId: 42161 });
+                                break;
+                            case 'robinhood-mainnet':
+                                networkInfo = ethers.Network.from({ name: 'robinhood', chainId: 4663 });
                                 break;
                             default:
                                 networkInfo = null;
