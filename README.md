@@ -118,12 +118,14 @@ The wallet includes pre-configured support for:
 | Optimism | ETH | 10 | https://mainnet.optimism.io |
 | Base | ETH | 8453 | https://mainnet.base.org |
 | Sepolia Testnet | ETH | 11155111 | https://1rpc.io/sepolia |
+| Robinhood Chain | ETH | 4663 | https://rpc.mainnet.chain.robinhood.com |
+| Robinhood Chain Testnet | ETH | 46630 | https://rpc.testnet.chain.robinhood.com |
 | Custom | Various | Various | User-defined |
 
 ## 🛠️ Development
 
 ### Customization
-- **Add Networks**: Edit the `availableNetworks` array in `index.html`
+- **Add Networks**: Edit the `availableNetworks` array in `app.js`
 
 ## 🔒 Security Considerations
 
