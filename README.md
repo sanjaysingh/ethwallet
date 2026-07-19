@@ -86,11 +86,11 @@ Then visit `http://localhost:8000` in your browser.
 ## 🔧 Technical Details
 
 ### Architecture
-- **Frontend**: Vue.js 3.5.13 with Bootstrap 5.3.3
-- **Blockchain**: Ethers.js 6.13.5 for all Ethereum interactions
+- **Frontend**: Vue.js 3.5.40 with Bootstrap 5.3.3
+- **Blockchain**: Ethers.js 6.17.0 for all Ethereum interactions
 - **Styling**: Bootstrap 5 with custom CSS for enhanced mobile experience
 - **Icons**: Bootstrap Icons 1.11.3 for consistent iconography
-- **QR Codes**: QRCode.js 1.0.0 for address QR generation
+- **QR Codes**: qrcode 1.5.4 (soldair/node-qrcode) for address QR generation
 
 ### Local Dependencies
 All dependencies are bundled locally in the `libs/` directory:
@@ -99,9 +99,9 @@ libs/
 ├── bootstrap-5.3.3.min.css           # Bootstrap CSS framework
 ├── bootstrap-5.3.3.bundle.min.js     # Bootstrap JavaScript
 ├── bootstrap-icons-1.11.3.min.css    # Bootstrap Icons
-├── ethers-6.13.5-ethers.umd.min.js   # Ethereum library
-├── vue-3.5.13-vue.global.prod.min.js # Vue.js framework
-├── qrcode-1.0.0.min.js               # QR code generation
+├── ethers-6.17.0-ethers.umd.min.js   # Ethereum library
+├── vue-3.5.40-vue.global.prod.min.js # Vue.js framework
+├── qrcode-1.5.4.min.js               # QR code generation
 └── fonts/
     ├── bootstrap-icons.woff2          # Icon fonts
     └── bootstrap-icons.woff
