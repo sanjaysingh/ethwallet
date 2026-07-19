@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Ethereum Wallet (Testing Only)</title>
+    <link rel="icon" href="qr-icon.svg" type="image/svg+xml">
     <link rel="stylesheet" href="libs/bootstrap-5.3.3.min.css">
     <link rel="stylesheet" href="libs/bootstrap-icons-1.11.3.min.css">
     <link rel="stylesheet" href="styles.css?v=__CACHE_VERSION__">
-    <script src="libs/ethers-6.13.5-ethers.umd.min.js"></script>
-    <script src="libs/vue-3.5.13-vue.global.prod.min.js"></script>
+    <script src="libs/ethers-6.17.0-ethers.umd.min.js"></script>
+    <script src="libs/vue-3.5.40-vue.global.prod.min.js"></script>
 </head>
 <body>
     <!-- Vue App Root -->
@@ -93,19 +94,21 @@
                                         <button class="btn btn-primary me-2" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
                                         <button class="btn btn-primary" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
                                     </div>
-                                    <div class="mb-3">
+                                    <form class="mb-3" @submit.prevent="initializeWallet">
                                         <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
                                          <div class="input-group">
                                              <input :type="seedVisible ? 'text' : 'password'" class="form-control" id="seed-input" 
-                                                    placeholder="Enter seed phrase or private key" v-model="seedPhrase" @keydown.enter="initializeWallet">
+                                                    name="wallet-secret"
+                                                    autocomplete="off"
+                                                    placeholder="Enter seed phrase or private key" v-model="seedPhrase">
                                              <button class="btn btn-outline-secondary" type="button" @click="toggleSeedVisibility" title="Show/Hide Key">
                                                 <i :class="['bi', seedVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
                                              </button>
-                                             <button class="btn btn-success" type="button" @click="initializeWallet" :disabled="!seedPhrase" title="Import Wallet">
+                                             <button class="btn btn-success" type="submit" :disabled="!seedPhrase" title="Import Wallet">
                                                 <i class="bi bi-box-arrow-in-right me-1"></i> Import
                                              </button>
                                          </div>
-                                    </div>
+                                    </form>
                                 </div>
 
                                <!-- Loaded Wallet Info Section -->
@@ -251,7 +254,7 @@
     <!-- JS Includes -->
     <script src="libs/bootstrap-5.3.3.bundle.min.js"></script>
     <!-- Add QR Code Library -->
-    <script src="libs/qrcode-1.0.0.min.js"></script>
+    <script src="libs/qrcode-1.5.4.min.js"></script>
     <!-- Main Application -->
     <script src="app.js?v=__CACHE_VERSION__"></script>
 </body>

@@ -726,32 +726,35 @@ createApp({
             }
         };
 
-        const getQRCodeUrl = (address) => {
-            const base64Address = btoa(address);
-            return `https://qrcode.sanjaysingh.net/?text=${base64Address}`;
-        };
-
         const generateQRCode = (address, elementRef) => {
             if (!elementRef || !address) return;
-            
+
             // Clear any existing QR code
             elementRef.innerHTML = '';
-            
+
             try {
-                // Ensure QRCode library is available
-                if (typeof QRCode === 'undefined') {
+                if (typeof QRCode === 'undefined' || typeof QRCode.toString !== 'function') {
                     console.error("QRCode library not loaded");
                     elementRef.textContent = 'Error: QR Code library not loaded.';
                     return;
                 }
-                
-                new QRCode(elementRef, {
-                    text: address,
+
+                QRCode.toString(address, {
+                    type: 'svg',
                     width: 256,
-                    height: 256,
-                    colorDark: "#000000",
-                    colorLight: "#ffffff",
-                    correctLevel: QRCode.CorrectLevel.H
+                    margin: 1,
+                    errorCorrectionLevel: 'H',
+                    color: {
+                        dark: '#000000',
+                        light: '#ffffff'
+                    }
+                }, (err, svg) => {
+                    if (err) {
+                        console.error("Error generating QR code:", err);
+                        elementRef.textContent = 'Error generating QR code.';
+                        return;
+                    }
+                    elementRef.innerHTML = svg;
                 });
             } catch (e) {
                 console.error("Error generating QR code:", e);
@@ -848,7 +851,6 @@ createApp({
             generatePrivateKeyWallet,
             generateSeedPhraseWallet,
             copyAddress,
-            getQRCodeUrl,
             generateQRCode,
             generateAllQRCodes,
             updateRpcEndpoint,
