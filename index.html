@@ -119,6 +119,25 @@
                                              </button>
                                          </div>
                                     </form>
+                                    <div class="mb-3" v-if="previousSessions.length">
+                                        <label for="previous-session-select" class="form-label">Previous sessions (this page)</label>
+                                        <select
+                                            class="form-select"
+                                            id="previous-session-select"
+                                            v-model="selectedPreviousSession"
+                                            @change="reconnectPreviousSession"
+                                        >
+                                            <option disabled value="">Select a previous key or phrase…</option>
+                                            <option
+                                                v-for="(session, index) in previousSessions"
+                                                :key="session.id"
+                                                :value="session.id"
+                                            >
+                                                {{ index + 1 }}. {{ formatAddressShort(session.address) }}
+                                            </option>
+                                        </select>
+                                        <small class="form-text text-muted">Remembered until you refresh the page.</small>
+                                    </div>
                                 </div>
 
                                <!-- Loaded Wallet Info Section -->
