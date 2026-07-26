@@ -29,6 +29,9 @@ createApp({
         const rpcEndpoint = ref('https://mainnet.base.org');
         const seedPhrase = ref('');
         const seedVisible = ref(false);
+        // In-memory only; cleared automatically on page refresh
+        const previousSessions = ref([]);
+        const selectedPreviousSession = ref('');
         
         // Available networks with their RPC endpoints
         const availableNetworks = ref([
@@ -339,6 +342,38 @@ createApp({
 
         const getTxExplorerUrl = (txHash) => buildTxExplorerUrl(txHash, selectedNetwork.value);
 
+        const rememberPreviousSession = (secret, address) => {
+            if (!secret || !address) {
+                return;
+            }
+
+            previousSessions.value = previousSessions.value.filter(
+                (session) => session.secret !== secret
+            );
+
+            previousSessions.value.unshift({
+                id: `${Date.now()}-${address}`,
+                secret,
+                address,
+                type: secret.includes(' ') ? 'mnemonic' : 'privateKey'
+            });
+
+            selectedPreviousSession.value = '';
+        };
+
+        const reconnectPreviousSession = async () => {
+            const session = previousSessions.value.find(
+                (entry) => entry.id === selectedPreviousSession.value
+            );
+            if (!session) {
+                return;
+            }
+
+            seedPhrase.value = session.secret;
+            await initializeWallet();
+            selectedPreviousSession.value = '';
+        };
+
         const clearSession = () => {
             wallets.value.length = 0;
             walletPrivateKeys.length = 0;
@@ -360,6 +395,8 @@ createApp({
             currentPrivateKey.value = '';
             originalSeedInput.value = '';
             isPrivateKeyVisible.value = false;
+            selectedPreviousSession.value = '';
+            // Keep previousSessions so the user can reconnect without retyping
             updateWalletStateUI();
             showAlert('Wallet session cleared.', 'info');
         };
@@ -462,6 +499,10 @@ createApp({
                 isWalletInitialized.value = true;
                 updateWalletStateUI();
                 walletStatus.value = '';
+                rememberPreviousSession(
+                    originalSeedInput.value,
+                    wallets.value[0]?.address || accounts.value[0]?.address
+                );
                 showAlert('Wallet initialized successfully!', 'success');
                 
             } catch (err) {
@@ -838,6 +879,8 @@ createApp({
             rpcEndpoint,
             seedPhrase,
             seedVisible,
+            previousSessions,
+            selectedPreviousSession,
             walletStatus,
             error,
             accounts,
@@ -862,6 +905,7 @@ createApp({
             toggleCurrentPrivateKeyVisibility,
             copyPrivateKey,
             clearSession,
+            reconnectPreviousSession,
             initializeWallet,
             updateTokenBalance,
             estimateGas,
