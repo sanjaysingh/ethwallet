@@ -4,7 +4,7 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 
 ## ⚠️ **Critical Security Warning**
 
-**THIS WALLET IS FOR TESTING PURPOSES ONLY.** Never use it with real funds or on mainnet. Always use testnets and test tokens. This application stores private keys in browser memory and should never be used for production or real cryptocurrency transactions.
+**THIS WALLET IS FOR TESTING AND DEVELOPMENT USE.** It stores private keys in browser memory only and is not a production custody wallet. Do not use it to hold large amounts of cryptocurrency or as a long-term wallet. Prefer small amounts and clear the session when you are done.
 
 ## ✨ Key Features
 
@@ -15,13 +15,14 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 - **Secure Key Display** - Show/hide private keys and seed phrases with copy functionality
 
 ### 🌐 Multi-Chain Support
-- **Pre-configured Networks** - Ethereum, Polygon,  Arbitrum, Optimism, Base, and more
+- **Pre-configured Networks** - Ethereum, Polygon, Arbitrum, Optimism, Base, Sepolia, and more
+- **Grouped Network Picker** - Networks organized into Testnets, Mainnets, and Custom (default: Base)
 - **Custom RPC Support** - Add any EVM-compatible network
 - **Automatic Network Detection** - Smart detection of network parameters
-- **Native Token Recognition** - Automatic detection of native tokens (ETH, MATIC, etc.)
+- **Native Token Recognition** - Automatic detection of native tokens (ETH, POL, etc.)
 
 ### 💸 Transaction Features
-- **Native Token Transfers** - Send ETH, MATIC, and other native tokens
+- **Native Token Transfers** - Send ETH, POL, and other native tokens
 - **Real-time Gas Estimation** - Accurate gas cost calculation with safety buffer
 - **Transaction Status** - Live transaction status updates
 
@@ -56,7 +57,7 @@ Then visit `http://localhost:8000` in your browser.
 ### Getting Started
 
 1. **Network Configuration**
-   - Select a network from the dropdown (Ethereum, Polygon, etc.)
+   - Select a network from the dropdown (grouped as Testnets, Mainnets, or Custom; default is Base)
    - Or enter a custom RPC endpoint
    - The wallet will automatically detect network parameters
 
@@ -108,23 +109,23 @@ libs/
 ```
 
 ### Supported Networks
-The wallet includes pre-configured support for:
+The wallet includes pre-configured support for the networks below. In the UI they are grouped as Testnets, Mainnets, and Custom. **Base** is the default network.
 
-| Network | Native Token | Chain ID | RPC Endpoint |
-|---------|-------------|----------|--------------|
-| Ethereum | ETH | 1 | https://eth.drpc.org |
-| Polygon | MATIC | 137 | https://polygon-rpc.com |
-| Arbitrum | ETH | 42161 | https://arb1.arbitrum.io/rpc |
-| Optimism | ETH | 10 | https://mainnet.optimism.io |
-| Base | ETH | 8453 | https://mainnet.base.org |
-| Sepolia Testnet | ETH | 11155111 | https://1rpc.io/sepolia |
-| Robinhood Chain | ETH | 4663 | https://rpc.mainnet.chain.robinhood.com |
-| Custom | Various | Various | User-defined |
+| Network | Native Token | Chain ID | RPC Endpoint | Group |
+|---------|-------------|----------|--------------|-------|
+| Sepolia Testnet | ETH | 11155111 | https://1rpc.io/sepolia | Testnet |
+| Ethereum | ETH | 1 | https://eth.drpc.org | Mainnet |
+| Base (default) | ETH | 8453 | https://mainnet.base.org | Mainnet |
+| Optimism | ETH | 10 | https://mainnet.optimism.io | Mainnet |
+| Polygon | POL | 137 | https://polygon-rpc.com | Mainnet |
+| Arbitrum | ETH | 42161 | https://arb1.arbitrum.io/rpc | Mainnet |
+| Robinhood Chain | ETH | 4663 | https://rpc.mainnet.chain.robinhood.com | Mainnet |
+| Custom | Various | Various | User-defined | Other |
 
 ## 🛠️ Development
 
 ### Customization
-- **Add Networks**: Edit the `availableNetworks` array in `app.js`
+- **Add Networks**: Edit the `availableNetworks` array in `app.js` (set `isTestnet` for grouping)
 
 ## 🔒 Security Considerations
 
@@ -142,10 +143,10 @@ The wallet includes pre-configured support for:
 - ✅ Provide clear security warnings
 
 ### Best Practices
-1. **Only use on testnets** - Never use with real funds
+1. **Treat this as a testing tool** - Prefer small amounts; do not use it for long-term custody
 2. **Clear session after use** - Use the "Clear Wallet Session" button
-4. **Test transactions** - Start with small amounts on testnets
-5. **Backup seed phrases** - Store seed phrases securely offline
+3. **Double-check the network** - Confirm Testnet vs Mainnet before sending
+4. **Backup seed phrases** - Store seed phrases securely offline
 
 ## 📄 License
 
@@ -153,4 +154,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**⚠️ FINAL REMINDER: This is a testing and development tool. Never use it with real cryptocurrency or on production networks. Always use testnets and test tokens.**
+**⚠️ FINAL REMINDER: This is a testing and development tool with in-memory keys. It is not a production custody wallet—use carefully and clear your session when finished.**
