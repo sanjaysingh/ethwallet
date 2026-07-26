@@ -27,37 +27,44 @@ createApp({
             {
                 id: 'ethereum',
                 name: 'Ethereum Mainnet',
-                rpcUrl: 'https://eth.drpc.org'
+                rpcUrl: 'https://eth.drpc.org',
+                isTestnet: false
             },
             {
                 id: 'sepolia',
                 name: 'Sepolia Testnet',
-                rpcUrl: 'https://1rpc.io/sepolia'
+                rpcUrl: 'https://1rpc.io/sepolia',
+                isTestnet: true
             },
             {
                 id: 'base',
                 name: 'Base',
-                rpcUrl: 'https://mainnet.base.org'
+                rpcUrl: 'https://mainnet.base.org',
+                isTestnet: false
             },
             {
                 id: 'optimism',
                 name: 'Optimism',
-                rpcUrl: 'https://mainnet.optimism.io'
+                rpcUrl: 'https://mainnet.optimism.io',
+                isTestnet: false
             },
             {
                 id: 'polygon',
                 name: 'Polygon',
-                rpcUrl: 'https://polygon-rpc.com'
+                rpcUrl: 'https://polygon-rpc.com',
+                isTestnet: false
             },
             {
                 id: 'arbitrum',
                 name: 'Arbitrum One',
-                rpcUrl: 'https://arb1.arbitrum.io/rpc'
+                rpcUrl: 'https://arb1.arbitrum.io/rpc',
+                isTestnet: false
             },
             {
                 id: 'robinhood-mainnet',
                 name: 'Robinhood Chain',
-                rpcUrl: 'https://rpc.mainnet.chain.robinhood.com'
+                rpcUrl: 'https://rpc.mainnet.chain.robinhood.com',
+                isTestnet: false
             },
             {
                 id: 'custom',
@@ -65,6 +72,13 @@ createApp({
                 rpcUrl: ''
             }
         ]);
+
+        const testnetNetworks = computed(() =>
+            availableNetworks.value.filter(n => n.id !== 'custom' && n.isTestnet)
+        );
+        const mainnetNetworks = computed(() =>
+            availableNetworks.value.filter(n => n.id !== 'custom' && !n.isTestnet)
+        );
         
         const walletStatus = ref('');
         const error = ref('');
@@ -236,7 +250,7 @@ createApp({
                     'sepolia': { name: 'Sepolia Testnet', chainId: 11155111, nativeSymbol: 'ETH' },
                     'base': { name: 'Base', chainId: 8453, nativeSymbol: 'ETH' },
                     'optimism': { name: 'Optimism', chainId: 10, nativeSymbol: 'ETH' },
-                    'polygon': { name: 'Polygon', chainId: 137, nativeSymbol: 'MATIC' },
+                    'polygon': { name: 'Polygon', chainId: 137, nativeSymbol: 'POL' },
                     'arbitrum': { name: 'Arbitrum One', chainId: 42161, nativeSymbol: 'ETH' },
                     'robinhood-mainnet': { name: 'Robinhood Chain', chainId: 4663, nativeSymbol: 'ETH' }
                 };
@@ -258,7 +272,7 @@ createApp({
                 const chainToSymbol = {
                     1: 'ETH',      // Ethereum Mainnet
                     11155111: 'ETH', // Sepolia Testnet
-                    137: 'MATIC',  // Polygon
+                    137: 'POL',    // Polygon
                     56: 'BNB',     // BSC
                     43114: 'AVAX', // Avalanche
                     42161: 'ETH',  // Arbitrum
@@ -818,6 +832,8 @@ createApp({
             tabs,
             selectedNetwork,
             availableNetworks,
+            testnetNetworks,
+            mainnetNetworks,
             rpcEndpoint,
             seedPhrase,
             seedVisible,
