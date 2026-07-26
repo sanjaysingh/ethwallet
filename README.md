@@ -24,7 +24,7 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 ### 💸 Transaction Features
 - **Native Token Transfers** - Send ETH, POL, and other native tokens
 - **Real-time Gas Estimation** - Accurate gas cost calculation with safety buffer
-- **Transaction Status** - Live transaction status updates
+- **Transaction Status** - Live transaction status updates with a block explorer link after send
 
 ### 🔒 Self-Contained
 - **No CDN Dependencies** - All libraries stored locally
@@ -78,6 +78,7 @@ Then visit `http://localhost:8000` in your browser.
 - Select the sending address from your accounts
 - Enter recipient address and amount
 - Review gas costs and confirm transaction
+- After sending, open the transaction on the network's block explorer (Etherscan, Basescan, etc.)
 
 #### Receive Tab
 - View QR codes for all your addresses
