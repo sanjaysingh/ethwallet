@@ -188,13 +188,19 @@ createApp({
             return network ? network.name : 'Unknown';
         };
 
-        // Computed property for masked private key display
+        // Same shortening used for session key display (private key or seed phrase)
+        const formatSecretShort = (secret) => {
+            if (!secret || secret.length < 10) return secret || '***';
+            return `${secret.substring(0, 6)}...${secret.substring(secret.length - 6)}`;
+        };
+
+        // Computed property for masked private key / seed phrase display
         const currentPrivateKeyDisplay = computed(() => {
             if (!originalSeedInput.value || originalSeedInput.value.length < 10) return '***';
             if (isPrivateKeyVisible.value) {
                 return originalSeedInput.value;
             }
-            return `${originalSeedInput.value.substring(0, 6)}...${originalSeedInput.value.substring(originalSeedInput.value.length - 6)}`;
+            return formatSecretShort(originalSeedInput.value);
         });
 
         // Alert system
@@ -916,7 +922,8 @@ createApp({
             generateQRCode,
             generateAllQRCodes,
             updateRpcEndpoint,
-            formatAddressShort
+            formatAddressShort,
+            formatSecretShort
         };
     }
 }).mount('#app');
