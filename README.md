@@ -13,7 +13,7 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 - **Import Existing Wallets** - Support for both private keys and seed phrases
 - **Multiple Account Support** - Manage multiple accounts from a single seed phrase
 - **Secure Key Display** - Show/hide private keys and seed phrases with copy functionality
-- **In-session Reconnect** - Reuse keys/phrases from earlier imports on the same page load (memory only; cleared on refresh)
+- **In-session Reconnect** - Reuse keys/phrases from earlier imports on the same page load (memory only; cleared on refresh; listed oldest to newest)
 
 ### 🌐 Multi-Chain Support
 - **Pre-configured Networks** - Ethereum, Polygon, Arbitrum, Optimism, Base, Sepolia, and more

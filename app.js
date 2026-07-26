@@ -353,16 +353,25 @@ createApp({
                 return;
             }
 
-            previousSessions.value = previousSessions.value.filter(
-                (session) => session.secret !== secret
+            const existingIndex = previousSessions.value.findIndex(
+                (session) => session.secret === secret
             );
 
-            previousSessions.value.unshift({
-                id: `${Date.now()}-${address}`,
-                secret,
-                address,
-                type: secret.includes(' ') ? 'mnemonic' : 'privateKey'
-            });
+            if (existingIndex !== -1) {
+                // Keep position so dropdown indices stay stable (oldest → newest)
+                previousSessions.value[existingIndex] = {
+                    ...previousSessions.value[existingIndex],
+                    address,
+                    type: secret.includes(' ') ? 'mnemonic' : 'privateKey'
+                };
+            } else {
+                previousSessions.value.push({
+                    id: `${Date.now()}-${address}`,
+                    secret,
+                    address,
+                    type: secret.includes(' ') ? 'mnemonic' : 'privateKey'
+                });
+            }
 
             selectedPreviousSession.value = '';
         };
