@@ -127,6 +127,17 @@ The wallet includes pre-configured support for the networks below. In the UI the
 
 ### Customization
 - **Add Networks**: Edit the `availableNetworks` array in `app.js` (set `isTestnet` for grouping)
+- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs)
+
+### Tests
+Unit tests use Vitest and run against `utils.js`. The app itself stays a static site—no bundler is required to deploy.
+
+```bash
+npm install
+npm test
+```
+
+CI runs `npm test` on every pull request and push to `main` (workflow: `.github/workflows/test.yml`, job name `unit-tests`).
 
 ## 🔒 Security Considerations
 

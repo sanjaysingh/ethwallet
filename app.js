@@ -1,3 +1,11 @@
+import {
+    DEFAULT_NETWORK_ID,
+    formatAddressShort,
+    getNetworkFromSearch,
+    buildUrlWithNetwork,
+    getTxExplorerUrl as buildTxExplorerUrl
+} from './utils.js?v=__CACHE_VERSION__';
+
 // ERC20 Token ABI
 const ERC20_ABI = [
     "function balanceOf(address owner) view returns (uint256)",
@@ -94,17 +102,6 @@ createApp({
         const txExplorerUrl = ref('');
         const estimatedGas = ref('');
         const tokenInfo = ref(null);
-
-        // Block explorer base URLs by network id (append tx hash)
-        const EXPLORER_TX_URLS = {
-            ethereum: 'https://etherscan.io/tx/',
-            sepolia: 'https://sepolia.etherscan.io/tx/',
-            base: 'https://basescan.org/tx/',
-            optimism: 'https://optimistic.etherscan.io/tx/',
-            polygon: 'https://polygonscan.com/tx/',
-            arbitrum: 'https://arbiscan.io/tx/',
-            'robinhood-mainnet': 'https://robinhoodchain.blockscout.com/tx/'
-        };
         
         // Timeout for auto-clearing error messages
         let txStatusTimeout = null;
@@ -129,22 +126,12 @@ createApp({
         let allowedRpcEndpoint = null;
 
         // Deep linking helper functions
-        const getNetworkFromUrl = () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            return urlParams.get('network');
-        };
+        const getNetworkFromUrl = () => getNetworkFromSearch(window.location.search);
 
         const updateUrlWithNetwork = (networkId) => {
-            const url = new URL(window.location.href);
-            if (networkId && networkId !== 'base') {
-                // Only add to URL if not the default network
-                url.searchParams.set('network', networkId);
-            } else {
-                // Remove param if it's the default network
-                url.searchParams.delete('network');
-            }
+            const nextUrl = buildUrlWithNetwork(window.location.href, networkId, DEFAULT_NETWORK_ID);
             // Update URL without reloading the page
-            window.history.replaceState({}, '', url.toString());
+            window.history.replaceState({}, '', nextUrl);
         };
 
         // Lifecycle
@@ -206,12 +193,6 @@ createApp({
             }
             return `${originalSeedInput.value.substring(0, 6)}...${originalSeedInput.value.substring(originalSeedInput.value.length - 6)}`;
         });
-
-        // Utility function to format addresses in short format
-        const formatAddressShort = (address) => {
-            if (!address || address.length < 10) return address;
-            return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
-        };
 
         // Alert system
         let currentAlertTimeout = null;
@@ -356,13 +337,7 @@ createApp({
             }
         };
 
-        const getTxExplorerUrl = (txHash) => {
-            if (!txHash || selectedNetwork.value === 'custom') {
-                return '';
-            }
-            const baseUrl = EXPLORER_TX_URLS[selectedNetwork.value];
-            return baseUrl ? `${baseUrl}${txHash}` : '';
-        };
+        const getTxExplorerUrl = (txHash) => buildTxExplorerUrl(txHash, selectedNetwork.value);
 
         const clearSession = () => {
             wallets.value.length = 0;
