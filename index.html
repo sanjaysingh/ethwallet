@@ -224,6 +224,11 @@
 
                              <div v-if="txStatus" :class="['alert', txStatusType === 'error' ? 'alert-danger' : 'alert-success', 'mt-3']">
                                 <strong>Transaction Status:</strong> {{ txStatus }}
+                                <div v-if="txExplorerUrl" class="mt-2">
+                                    <a :href="txExplorerUrl" target="_blank" rel="noopener noreferrer" class="alert-link">
+                                        <i class="bi bi-box-arrow-up-right me-1"></i>View on block explorer
+                                    </a>
+                                </div>
                              </div>
                         </div>
                     </div>
