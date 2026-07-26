@@ -91,8 +91,20 @@ createApp({
         const amount = ref('');
         const txStatus = ref('');
         const txStatusType = ref(''); // 'success', 'error', or ''
+        const txExplorerUrl = ref('');
         const estimatedGas = ref('');
         const tokenInfo = ref(null);
+
+        // Block explorer base URLs by network id (append tx hash)
+        const EXPLORER_TX_URLS = {
+            ethereum: 'https://etherscan.io/tx/',
+            sepolia: 'https://sepolia.etherscan.io/tx/',
+            base: 'https://basescan.org/tx/',
+            optimism: 'https://optimistic.etherscan.io/tx/',
+            polygon: 'https://polygonscan.com/tx/',
+            arbitrum: 'https://arbiscan.io/tx/',
+            'robinhood-mainnet': 'https://robinhoodchain.blockscout.com/tx/'
+        };
         
         // Timeout for auto-clearing error messages
         let txStatusTimeout = null;
@@ -344,6 +356,14 @@ createApp({
             }
         };
 
+        const getTxExplorerUrl = (txHash) => {
+            if (!txHash || selectedNetwork.value === 'custom') {
+                return '';
+            }
+            const baseUrl = EXPLORER_TX_URLS[selectedNetwork.value];
+            return baseUrl ? `${baseUrl}${txHash}` : '';
+        };
+
         const clearSession = () => {
             wallets.value.length = 0;
             walletPrivateKeys.length = 0;
@@ -353,6 +373,7 @@ createApp({
             tokenInfo.value = null;
             txStatus.value = '';
             txStatusType.value = '';
+            txExplorerUrl.value = '';
             if (txStatusTimeout) {
                 clearTimeout(txStatusTimeout);
                 txStatusTimeout = null;
@@ -429,6 +450,7 @@ createApp({
                 tokenInfo.value = null;
                 txStatus.value = '';
                 txStatusType.value = '';
+                txExplorerUrl.value = '';
                 if (txStatusTimeout) {
                     clearTimeout(txStatusTimeout);
                     txStatusTimeout = null;
@@ -617,6 +639,7 @@ createApp({
                 isLoading.value = true;
                 txStatus.value = 'Preparing transaction...';
                 txStatusType.value = 'success';
+                txExplorerUrl.value = '';
 
                 const walletIndex = accounts.value.find(acc => acc.address === selectedFromAddress.value)?.index;
                 if (walletIndex === undefined) {
@@ -665,6 +688,7 @@ createApp({
                     tx = await connectedWallet.sendTransaction(transferTx);
                 }
 
+                txExplorerUrl.value = getTxExplorerUrl(tx.hash);
                 txStatus.value = `Transaction sent! Hash: ${tx.hash}`;
                 txStatusType.value = 'success';
                 await tx.wait();
@@ -674,11 +698,13 @@ createApp({
             } catch (err) {
                 txStatus.value = 'Transaction failed: ' + err.message;
                 txStatusType.value = 'error';
+                txExplorerUrl.value = '';
                 
                 // Auto-clear error messages after 10 seconds
                 txStatusTimeout = setTimeout(() => {
                     txStatus.value = '';
                     txStatusType.value = '';
+                    txExplorerUrl.value = '';
                     txStatusTimeout = null;
                 }, 10000);
             } finally {
@@ -847,6 +873,7 @@ createApp({
             amount,
             txStatus,
             txStatusType,
+            txExplorerUrl,
             estimatedGas,
             chainInfo,
             tokenInfo,
