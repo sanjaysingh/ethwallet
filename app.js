@@ -313,6 +313,29 @@ createApp({
             isPrivateKeyVisible.value = !isPrivateKeyVisible.value;
         };
 
+        const showCopySuccess = (event) => {
+            const button = event.target.closest('button');
+            if (!button) {
+                return;
+            }
+
+            const icon = button.querySelector('i');
+            if (!icon) {
+                return;
+            }
+
+            const originalClasses = icon.className;
+            const originalButtonClasses = button.className;
+
+            icon.className = 'bi bi-check-lg';
+            button.className = button.className.replace('btn-outline-secondary', 'btn-success');
+
+            setTimeout(() => {
+                icon.className = originalClasses;
+                button.className = originalButtonClasses;
+            }, 2000);
+        };
+
         const copyPrivateKey = async (event) => {
             if (!originalSeedInput.value) {
                 showAlert('No seed phrase or private key to copy', 'warning');
@@ -320,27 +343,7 @@ createApp({
             }
             try {
                 await navigator.clipboard.writeText(originalSeedInput.value);
-                
-                // Show check mark animation on the button
-                const button = event.target.closest('button');
-                if (button) {
-                    const icon = button.querySelector('i');
-                    if (icon) {
-                        // Store original classes
-                        const originalClasses = icon.className;
-                        const originalButtonClasses = button.className;
-                        
-                        // Change to check mark and success styling
-                        icon.className = 'bi bi-check-lg';
-                        button.className = button.className.replace('btn-outline-secondary', 'btn-success');
-                        
-                        // Restore original styling after 2 seconds
-                        setTimeout(() => {
-                            icon.className = originalClasses;
-                            button.className = originalButtonClasses;
-                        }, 2000);
-                    }
-                }
+                showCopySuccess(event);
             } catch (err) {
                 showAlert('Failed to copy to clipboard', 'warning');
             }
@@ -770,30 +773,26 @@ createApp({
         const copyAddress = async (address, event) => {
             try {
                 await navigator.clipboard.writeText(address);
-                
-                // Show check mark animation on the button
-                const button = event.target.closest('button');
-                if (button) {
-                    const icon = button.querySelector('i');
-                    if (icon) {
-                        // Store original classes
-                        const originalClasses = icon.className;
-                        const originalButtonClasses = button.className;
-                        
-                        // Change to check mark and success styling
-                        icon.className = 'bi bi-check-lg';
-                        button.className = button.className.replace('btn-outline-secondary', 'btn-success');
-                        
-                        // Restore original styling after 2 seconds
-                        setTimeout(() => {
-                            icon.className = originalClasses;
-                            button.className = originalButtonClasses;
-                        }, 2000);
-                    }
-                }
+                showCopySuccess(event);
             } catch (err) {
                 showError('Failed to copy address to clipboard');
                 showAlert('Failed to copy address to clipboard', 'warning');
+            }
+        };
+
+        const copyAccountPrivateKey = async (accountIndex, event) => {
+            const privateKey = walletPrivateKeys[accountIndex];
+            if (!privateKey) {
+                showAlert('No private key available for this wallet', 'warning');
+                return;
+            }
+
+            try {
+                await navigator.clipboard.writeText(privateKey);
+                showCopySuccess(event);
+            } catch (err) {
+                showError('Failed to copy private key to clipboard');
+                showAlert('Failed to copy private key to clipboard', 'warning');
             }
         };
 
@@ -928,6 +927,7 @@ createApp({
             generatePrivateKeyWallet,
             generateSeedPhraseWallet,
             copyAddress,
+            copyAccountPrivateKey,
             generateQRCode,
             generateAllQRCodes,
             updateRpcEndpoint,
