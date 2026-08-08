@@ -5,6 +5,10 @@ import {
     buildUrlWithNetwork,
     getTxExplorerUrl as buildTxExplorerUrl
 } from './utils.js?v=__CACHE_VERSION__';
+import {
+    FAUCET_TURNSTILE_SITE_KEY,
+    requestFaucetDrip
+} from './faucet.js?v=__CACHE_VERSION__';
 
 // ERC20 Token ABI
 const ERC20_ABI = [
@@ -18,7 +22,7 @@ const ERC20_ABI = [
 ];
 
 // Vue App Setup
-const { createApp, ref, watch, onMounted, computed } = Vue;
+const { createApp, ref, watch, onMounted, computed, nextTick } = Vue;
 
 createApp({
     setup() {
@@ -162,12 +166,15 @@ createApp({
             networkStatusText.value = `Selected Network: ${getNetworkName()}${validNetworkFromUrl ? '' : ' (Default)'}`;
             networkStatusClass.value = 'form-text text-primary d-block mt-2';
             
-            // Listen for Receive tab being shown to generate QR codes
+            // Listen for Receive tab being shown to generate QR codes / faucet captcha
             const receiveTabTrigger = document.getElementById('receive-tab');
             if (receiveTabTrigger) {
                 receiveTabTrigger.addEventListener('shown.bs.tab', event => {
                     if (isWalletInitialized.value) {
                         generateAllQRCodes();
+                    }
+                    if (selectedNetwork.value === 'sepolia') {
+                        mountFaucetTurnstile();
                     }
                 });
             }
@@ -179,6 +186,17 @@ createApp({
                 estimateGas();
             } else {
                 estimatedGas.value = '';
+            }
+        });
+
+        watch(selectedNetwork, (networkId) => {
+            if (networkId === 'sepolia') {
+                mountFaucetTurnstile();
+            } else {
+                teardownFaucetTurnstile();
+                faucetStatus.value = '';
+                faucetStatusOk.value = false;
+                faucetExplorerUrl.value = '';
             }
         });
 
@@ -223,6 +241,108 @@ createApp({
                 dismissAlert(id);
                 currentAlertTimeout = null;
             }, 4000);
+        };
+
+        // Sepolia faucet (Receive tab)
+        const faucetTurnstileEl = ref(null);
+        const faucetTurnstileToken = ref('');
+        const faucetTurnstileWidgetId = ref(null);
+        const faucetLoading = ref(false);
+        const faucetBusyAddress = ref('');
+        const faucetStatus = ref('');
+        const faucetStatusOk = ref(false);
+        const faucetExplorerUrl = ref('');
+
+        const teardownFaucetTurnstile = () => {
+            if (faucetTurnstileWidgetId.value != null && window.turnstile) {
+                try {
+                    window.turnstile.remove(faucetTurnstileWidgetId.value);
+                } catch {
+                    // ignore
+                }
+            }
+            faucetTurnstileWidgetId.value = null;
+            faucetTurnstileToken.value = '';
+            if (faucetTurnstileEl.value) {
+                faucetTurnstileEl.value.innerHTML = '';
+            }
+        };
+
+        const mountFaucetTurnstile = async () => {
+            await nextTick();
+            if (selectedNetwork.value !== 'sepolia' || !faucetTurnstileEl.value) {
+                return;
+            }
+            if (!window.turnstile) {
+                // Script still loading; retry briefly.
+                setTimeout(mountFaucetTurnstile, 300);
+                return;
+            }
+            teardownFaucetTurnstile();
+            faucetTurnstileWidgetId.value = window.turnstile.render(faucetTurnstileEl.value, {
+                sitekey: FAUCET_TURNSTILE_SITE_KEY,
+                callback: (token) => {
+                    faucetTurnstileToken.value = token;
+                },
+                'expired-callback': () => {
+                    faucetTurnstileToken.value = '';
+                },
+                'error-callback': () => {
+                    faucetTurnstileToken.value = '';
+                },
+                theme: document.documentElement.getAttribute('data-bs-theme') === 'dark' ? 'dark' : 'light',
+            });
+        };
+
+        const resetFaucetTurnstile = () => {
+            faucetTurnstileToken.value = '';
+            if (faucetTurnstileWidgetId.value != null && window.turnstile) {
+                window.turnstile.reset(faucetTurnstileWidgetId.value);
+            } else {
+                mountFaucetTurnstile();
+            }
+        };
+
+        const receiveFromFaucet = async (address) => {
+            faucetStatus.value = '';
+            faucetStatusOk.value = false;
+            faucetExplorerUrl.value = '';
+
+            if (selectedNetwork.value !== 'sepolia') {
+                showAlert('Faucet is only available on Sepolia.', 'warning');
+                return;
+            }
+            if (!faucetTurnstileToken.value) {
+                showAlert('Complete the captcha first.', 'warning');
+                return;
+            }
+
+            faucetLoading.value = true;
+            faucetBusyAddress.value = address;
+            try {
+                const result = await requestFaucetDrip({
+                    address,
+                    turnstileToken: faucetTurnstileToken.value,
+                });
+                faucetStatusOk.value = true;
+                faucetStatus.value = `Sent ${result.amount} ${result.symbol}.`;
+                faucetExplorerUrl.value =
+                    result.explorerTxUrl || buildTxExplorerUrl(result.txHash, 'sepolia');
+                showAlert(`Faucet sent ${result.amount} ${result.symbol} to this account.`, 'success');
+                resetFaucetTurnstile();
+                if (typeof refreshAccounts === 'function') {
+                    await refreshAccounts();
+                }
+            } catch (err) {
+                faucetStatusOk.value = false;
+                const message = err?.message || 'Faucet request failed';
+                faucetStatus.value = message;
+                showAlert(message, 'danger');
+                resetFaucetTurnstile();
+            } finally {
+                faucetLoading.value = false;
+                faucetBusyAddress.value = '';
+            }
         };
 
         const dismissAlert = (id) => {
@@ -910,11 +1030,21 @@ createApp({
             chainInfo,
             tokenInfo,
             isWalletInitialized,
+
+            // Sepolia faucet (Receive tab)
+            faucetTurnstileEl,
+            faucetTurnstileToken,
+            faucetLoading,
+            faucetBusyAddress,
+            faucetStatus,
+            faucetStatusOk,
+            faucetExplorerUrl,
             
             // Methods
             toggleTheme,
             showAlert,
             dismissAlert,
+            receiveFromFaucet,
             toggleSeedVisibility,
             toggleCurrentPrivateKeyVisibility,
             copyPrivateKey,
