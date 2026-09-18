@@ -9,8 +9,9 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 ## ✨ Key Features
 
 ### 🔐 Wallet Management
-- **Generate New Wallets** - Create fresh wallets with secure seed phrases
-- **Import Existing Wallets** - Support for both private keys and seed phrases
+- **Generate New Wallets** - Create fresh wallets with private keys, seed phrases, or a device passkey
+- **Import Existing Wallets** - Support for private keys, seed phrases, and existing passkeys
+- **Passkey Wallets** - Derive a secp256k1 key from a WebAuthn passkey (PRF extension); the same passkey always reopens the same address
 - **Multiple Account Support** - Manage multiple accounts from a single seed phrase
 - **Secure Key Display** - Show/hide private keys and seed phrases with copy functionality
 - **In-session Reconnect** - Reuse keys/phrases from earlier imports on the same page load (memory only; cleared on refresh; listed oldest to newest)
@@ -63,10 +64,14 @@ Then visit `http://localhost:8000` in your browser.
    - The wallet will automatically detect network parameters
 
 2. **Wallet Setup**
-   - **New Wallet**: Click "Generate New Wallet" to create a fresh wallet
+   - **New Wallet**: Click **Privatekey Wallet**, **Seedphrase Wallet**, or **Passkey Wallet**
+   - **Passkey Wallet**: Creates a discoverable device passkey and derives an Ethereum key from WebAuthn PRF (Face ID, Windows Hello, etc.)
+   - **Open Passkey Wallet**: Reopens the same address from an existing passkey for this site
    - **Import Wallet**: Enter your seed phrase or private key and click "Import"
    - Your wallet will initialize and display all available accounts
-   - After clearing a session, use **Previous sessions (this page)** to reconnect a recently used key or phrase (lost on refresh)
+   - After clearing a session, use **Previous sessions (this page)** to reconnect a recently used key, phrase, or passkey-derived key (lost on refresh)
+
+   Passkey wallets need a secure context (HTTPS or localhost) and an authenticator that supports the WebAuthn **PRF** extension. They produce a normal EOA for this testing app (not an ERC-4337 smart account). The derived key is held in memory only, like other session keys.
 
 ### Using the Wallet
 
@@ -129,7 +134,7 @@ The wallet includes pre-configured support for the networks below. In the UI the
 
 ### Customization
 - **Add Networks**: Edit the `availableNetworks` array in `app.js` (set `isTestnet` for grouping)
-- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs)
+- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs) and `passkey.js` (WebAuthn PRF derivation)
 
 ### Tests
 Unit tests use Vitest and run against `utils.js`. The app itself stays a static site—no bundler is required to deploy.

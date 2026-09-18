@@ -9,6 +9,13 @@ import {
     FAUCET_TURNSTILE_SITE_KEY,
     requestFaucetDrip
 } from './faucet.js?v=__CACHE_VERSION__';
+import {
+    createPasskeyWallet,
+    isPasskeyCancellation,
+    isPasskeySupported,
+    passkeyErrorMessage,
+    unlockPasskeyWallet
+} from './passkey.js?v=__CACHE_VERSION__';
 
 // ERC20 Token ABI
 const ERC20_ABI = [
@@ -124,6 +131,9 @@ createApp({
         const isPrivateKeyVisible = ref(false);
         const currentPrivateKey = ref('');
         const originalSeedInput = ref(''); // Store the original input (seed phrase or private key)
+        const walletSource = ref(''); // 'mnemonic' | 'privateKey' | 'passkey'
+        const passkeysSupported = ref(false);
+        let pendingWalletSource = '';
 
         // Global variables
         let provider = null;
@@ -145,6 +155,7 @@ createApp({
         onMounted(() => {
             // Initialize theme
             document.documentElement.setAttribute('data-bs-theme', currentTheme.value);
+            passkeysSupported.value = isPasskeySupported();
             updateWalletStateUI();
             
             // Check for network in URL (deep linking support)
@@ -480,19 +491,21 @@ createApp({
                 (session) => session.secret === secret
             );
 
+            const sessionType = pendingWalletSource || walletSource.value || (secret.includes(' ') ? 'mnemonic' : 'privateKey');
+
             if (existingIndex !== -1) {
                 // Keep position so dropdown indices stay stable (oldest → newest)
                 previousSessions.value[existingIndex] = {
                     ...previousSessions.value[existingIndex],
                     address,
-                    type: secret.includes(' ') ? 'mnemonic' : 'privateKey'
+                    type: sessionType
                 };
             } else {
                 previousSessions.value.push({
                     id: `${Date.now()}-${address}`,
                     secret,
                     address,
-                    type: secret.includes(' ') ? 'mnemonic' : 'privateKey'
+                    type: sessionType
                 });
             }
 
@@ -507,6 +520,7 @@ createApp({
                 return;
             }
 
+            pendingWalletSource = session.type || '';
             seedPhrase.value = session.secret;
             await initializeWallet();
             selectedPreviousSession.value = '';
@@ -534,6 +548,8 @@ createApp({
             originalSeedInput.value = '';
             isPrivateKeyVisible.value = false;
             selectedPreviousSession.value = '';
+            walletSource.value = '';
+            pendingWalletSource = '';
             // Keep previousSessions so the user can reconnect without retyping
             updateWalletStateUI();
             showAlert('Wallet session cleared.', 'info');
@@ -611,6 +627,7 @@ createApp({
 
                 // Store the original input (seed phrase or private key)
                 originalSeedInput.value = seedPhrase.value;
+                walletSource.value = pendingWalletSource || (seedPhrase.value.includes(' ') ? 'mnemonic' : 'privateKey');
                 
                 if (seedPhrase.value.includes(' ')) {
                     // Seed phrase
@@ -641,9 +658,11 @@ createApp({
                     originalSeedInput.value,
                     wallets.value[0]?.address || accounts.value[0]?.address
                 );
+                pendingWalletSource = '';
                 showAlert('Wallet initialized successfully!', 'success');
                 
             } catch (err) {
+                pendingWalletSource = '';
                 showError('Failed to initialize wallet: ' + err.message);
                 showAlert('Failed to initialize wallet: ' + err.message, 'danger');
                 walletStatus.value = '';
@@ -868,11 +887,13 @@ createApp({
 
         const generatePrivateKeyWallet = async () => {
             try {
+                pendingWalletSource = 'privateKey';
                 const wallet = ethers.Wallet.createRandom();
                 seedPhrase.value = wallet.privateKey;
                 
                 await initializeWallet();
             } catch (err) {
+                pendingWalletSource = '';
                 showError('Failed to generate wallet: ' + err.message);
                 showAlert('Failed to generate wallet: ' + err.message, 'danger');
             }
@@ -880,14 +901,61 @@ createApp({
 
         const generateSeedPhraseWallet = async () => {
             try {
+                pendingWalletSource = 'mnemonic';
                 const wallet = ethers.Wallet.createRandom();
                 seedPhrase.value = wallet.mnemonic.phrase;
                 
                 await initializeWallet();
             } catch (err) {
+                pendingWalletSource = '';
                 showError('Failed to generate wallet: ' + err.message);
                 showAlert('Failed to generate wallet: ' + err.message, 'danger');
             }
+        };
+
+        const applyPasskeyWallet = async (passkeyResult) => {
+            pendingWalletSource = 'passkey';
+            seedPhrase.value = passkeyResult.privateKey;
+            await initializeWallet();
+        };
+
+        const generatePasskeyWallet = async () => {
+            try {
+                const result = await createPasskeyWallet();
+                await applyPasskeyWallet(result);
+            } catch (err) {
+                pendingWalletSource = '';
+                const message = passkeyErrorMessage(err);
+                if (isPasskeyCancellation(err)) {
+                    showAlert(message, 'info');
+                    return;
+                }
+                showError('Failed to create passkey wallet: ' + message);
+                showAlert('Failed to create passkey wallet: ' + message, 'danger');
+            }
+        };
+
+        const openPasskeyWallet = async () => {
+            try {
+                const result = await unlockPasskeyWallet();
+                await applyPasskeyWallet(result);
+            } catch (err) {
+                pendingWalletSource = '';
+                const message = passkeyErrorMessage(err);
+                if (isPasskeyCancellation(err)) {
+                    showAlert(message, 'info');
+                    return;
+                }
+                showError('Failed to open passkey wallet: ' + message);
+                showAlert('Failed to open passkey wallet: ' + message, 'danger');
+            }
+        };
+
+        const previousSessionLabel = (session) => {
+            if (session?.type === 'passkey' && session.address) {
+                return `Passkey ${formatAddressShort(session.address)}`;
+            }
+            return formatSecretShort(session?.secret);
         };
 
         const copyAddress = async (address, event) => {
@@ -1002,6 +1070,8 @@ createApp({
             currentPrivateKey,
             originalSeedInput,
             currentPrivateKeyDisplay,
+            walletSource,
+            passkeysSupported,
             
             // Original state
             currentTab,
@@ -1056,6 +1126,9 @@ createApp({
             sendTransaction,
             generatePrivateKeyWallet,
             generateSeedPhraseWallet,
+            generatePasskeyWallet,
+            openPasskeyWallet,
+            previousSessionLabel,
             copyAddress,
             copyAccountPrivateKey,
             generateQRCode,
