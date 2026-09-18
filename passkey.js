@@ -6,7 +6,25 @@ export const PASSKEY_USER_DISPLAY_NAME = 'Passkey Wallet';
 export const PASSKEY_PRF_SALT_LABEL = 'ethwallet:v1:prf';
 export const PASSKEY_DERIVATION_VERSION = 'v1';
 
+export function isValidPasskeyRpId(rpId) {
+    if (!rpId || rpId === 'localhost') {
+        return rpId === 'localhost';
+    }
+    // WebAuthn RP IDs must be DNS names. IP literals (127.0.0.1, ::1) are invalid.
+    if (/^\d{1,3}(\.\d{1,3}){3}$/.test(rpId)) {
+        return false;
+    }
+    if (rpId.startsWith('[') || rpId.includes(':')) {
+        return false;
+    }
+    return true;
+}
+
 export function isPasskeySupported(env = globalThis) {
+    const hostname = env.location?.hostname;
+    if (hostname && !isValidPasskeyRpId(hostname)) {
+        return false;
+    }
     return Boolean(
         env.isSecureContext &&
         env.navigator?.credentials &&
@@ -147,7 +165,7 @@ export function passkeyErrorMessage(err) {
         return 'Passkey request was cancelled.';
     }
     if (err.name === 'SecurityError') {
-        return 'Passkeys require HTTPS or localhost.';
+        return 'Passkeys require HTTPS or http://localhost. IP addresses such as 127.0.0.1 are not valid origins.';
     }
     if (err.name === 'InvalidStateError') {
         return 'A passkey already exists for this device. Use Open Passkey Wallet instead.';
@@ -258,6 +276,10 @@ export async function unlockPasskeyWallet({
 }
 
 function assertPasskeyAvailable(env) {
+    const hostname = env.location?.hostname;
+    if (hostname && !isValidPasskeyRpId(hostname)) {
+        throw new Error('Passkeys require HTTPS or http://localhost. IP addresses such as 127.0.0.1 are not valid origins.');
+    }
     if (!isPasskeySupported(env)) {
         throw new Error('Passkeys require a supported browser in a secure context (HTTPS or localhost).');
     }

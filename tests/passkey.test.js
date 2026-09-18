@@ -13,6 +13,7 @@ import {
     extractPrfOutput,
     isPasskeyCancellation,
     isPasskeySupported,
+    isValidPasskeyRpId,
     passkeyErrorMessage,
     readPrfFromCredential,
     unlockPasskeyWallet
@@ -28,6 +29,16 @@ function mockCredential({ prf, id = new Uint8Array([1, 2, 3, 4]) } = {}) {
         )
     };
 }
+
+describe('isValidPasskeyRpId', () => {
+    it('allows localhost and DNS names, rejects IP literals', () => {
+        expect(isValidPasskeyRpId('localhost')).toBe(true);
+        expect(isValidPasskeyRpId('ethwallet.sanjaysingh.net')).toBe(true);
+        expect(isValidPasskeyRpId('127.0.0.1')).toBe(false);
+        expect(isValidPasskeyRpId('::1')).toBe(false);
+        expect(isValidPasskeyRpId('')).toBe(false);
+    });
+});
 
 describe('isPasskeySupported', () => {
     it('is false without a secure context and WebAuthn API', () => {
@@ -46,6 +57,21 @@ describe('isPasskeySupported', () => {
                 }
             }
         })).toBe(true);
+    });
+
+    it('is false for IP-literal origins even in a secure context', () => {
+        const env = {
+            isSecureContext: true,
+            PublicKeyCredential: function PublicKeyCredential() {},
+            navigator: {
+                credentials: {
+                    create: () => {},
+                    get: () => {}
+                }
+            }
+        };
+        expect(isPasskeySupported({ ...env, location: { hostname: '127.0.0.1' } })).toBe(false);
+        expect(isPasskeySupported({ ...env, location: { hostname: 'localhost' } })).toBe(true);
     });
 });
 
@@ -132,7 +158,7 @@ describe('passkey error helpers', () => {
         expect(isPasskeyCancellation({ name: 'NotAllowedError' })).toBe(true);
         expect(isPasskeyCancellation({ name: 'AbortError' })).toBe(true);
         expect(passkeyErrorMessage({ name: 'NotAllowedError' })).toMatch(/cancelled/i);
-        expect(passkeyErrorMessage({ name: 'SecurityError' })).toMatch(/HTTPS/i);
+        expect(passkeyErrorMessage({ name: 'SecurityError' })).toMatch(/localhost/i);
         expect(passkeyErrorMessage({ name: 'InvalidStateError' })).toMatch(/Open Passkey Wallet/i);
         expect(passkeyErrorMessage({ message: 'no prf' })).toBe('no prf');
     });

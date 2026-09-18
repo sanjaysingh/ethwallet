@@ -104,16 +104,16 @@
                                     <div class="mb-3 d-flex flex-wrap gap-2">
                                         <button class="btn btn-primary" type="button" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
                                         <button class="btn btn-primary" type="button" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
-                                        <button class="btn btn-primary" type="button" @click="generatePasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Create a wallet from a new device passkey' : 'Passkeys require HTTPS or localhost in a supported browser'">
+                                        <button class="btn btn-primary" type="button" @click="generatePasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Create a wallet from a new device passkey' : 'Passkeys require HTTPS or http://localhost in a supported browser'">
                                             <i class="bi bi-fingerprint me-1"></i> Passkey Wallet
                                         </button>
-                                        <button class="btn btn-outline-primary" type="button" @click="openPasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Open a wallet from an existing passkey' : 'Passkeys require HTTPS or localhost in a supported browser'">
+                                        <button class="btn btn-outline-primary" type="button" @click="openPasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Open a wallet from an existing passkey' : 'Passkeys require HTTPS or http://localhost in a supported browser'">
                                             <i class="bi bi-unlock me-1"></i> Open Passkey Wallet
                                         </button>
                                     </div>
                                     <p class="form-text text-muted mb-3">
                                         Passkey wallets use this device's biometric or screen lock (WebAuthn PRF) to derive a private key. The same passkey always reopens the same wallet.
-                                        <span v-if="!passkeysSupported" class="text-warning d-block mt-1">Passkeys are unavailable in this browser or context. Use HTTPS/localhost and a WebAuthn-capable browser.</span>
+                                        <span v-if="!passkeysSupported" class="text-warning d-block mt-1">Passkeys are unavailable in this browser or context. Open the app at https:// or http://localhost/ in a WebAuthn-capable browser (IP addresses such as 127.0.0.1 are not valid).</span>
                                     </p>
                                     <form class="mb-3" @submit.prevent="initializeWallet">
                                         <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
