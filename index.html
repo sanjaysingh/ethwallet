@@ -101,10 +101,20 @@
 
                                <!-- Create/Import Section -->
                                 <div v-if="showWalletManagement">
-                                    <div class="mb-3">
-                                        <button class="btn btn-primary me-2" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
-                                        <button class="btn btn-primary" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
+                                    <div class="mb-3 d-flex flex-wrap gap-2">
+                                        <button class="btn btn-primary" type="button" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
+                                        <button class="btn btn-primary" type="button" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
+                                        <button class="btn btn-primary" type="button" @click="generatePasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Create a wallet from a new device passkey' : 'Passkeys require HTTPS or localhost in a supported browser'">
+                                            <i class="bi bi-fingerprint me-1"></i> Passkey Wallet
+                                        </button>
+                                        <button class="btn btn-outline-primary" type="button" @click="openPasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Open a wallet from an existing passkey' : 'Passkeys require HTTPS or localhost in a supported browser'">
+                                            <i class="bi bi-unlock me-1"></i> Open Passkey Wallet
+                                        </button>
                                     </div>
+                                    <p class="form-text text-muted mb-3">
+                                        Passkey wallets use this device's biometric or screen lock (WebAuthn PRF) to derive a private key. The same passkey always reopens the same wallet.
+                                        <span v-if="!passkeysSupported" class="text-warning d-block mt-1">Passkeys are unavailable in this browser or context. Use HTTPS/localhost and a WebAuthn-capable browser.</span>
+                                    </p>
                                     <form class="mb-3" @submit.prevent="initializeWallet">
                                         <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
                                          <div class="input-group">
@@ -134,7 +144,7 @@
                                                 :key="session.id"
                                                 :value="session.id"
                                             >
-                                                {{ index + 1 }}. {{ formatSecretShort(session.secret) }}
+                                                {{ index + 1 }}. {{ previousSessionLabel(session) }}
                                             </option>
                                         </select>
                                         <small class="form-text text-muted">Remembered until you refresh the page.</small>
@@ -154,6 +164,7 @@
                                                  <i class="bi bi-key"></i>
                                             </button>
                                          </div>
+                                         <small v-if="walletSource === 'passkey'" class="form-text text-muted d-block">This key is derived from your device passkey (WebAuthn PRF) for this session.</small>
                                          <small class="text-danger">Never share your private key or seed phrase!</small>
                                     </div>
                                     <button class="btn btn-danger btn-sm" @click="clearSession"><i class="bi bi-x-octagon me-1"></i> Clear Wallet Session</button>
