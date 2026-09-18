@@ -5,6 +5,25 @@ export const FAUCET_TURNSTILE_SITE_KEY = '0x4AAAAAAEKkKF6Ziy76EcQI';
 export const FAUCET_CHAIN_SLUG = 'sepolia';
 
 /**
+ * True when a Turnstile widget is already in the faucet container.
+ * Visiting Receive again should reuse it; a new challenge is only needed
+ * after a claim (reset) or when the token expires.
+ */
+export function isFaucetTurnstileAlreadyMounted(widgetId, container) {
+    return widgetId != null && Boolean(container && container.childNodes.length > 0);
+}
+
+/** Mount on network switch only if Receive is already visible (avoid hidden widgets). */
+export function shouldMountFaucetTurnstileOnNetworkChange(networkId, receivePane) {
+    if (networkId !== FAUCET_CHAIN_SLUG) {
+        return false;
+    }
+    return Boolean(
+        receivePane?.classList?.contains('show') || receivePane?.classList?.contains('active')
+    );
+}
+
+/**
  * Request a drip from the faucet API.
  * @param {{ address: string, turnstileToken: string, apiBase?: string, chain?: string }} params
  */
