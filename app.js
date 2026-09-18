@@ -7,7 +7,9 @@ import {
 } from './utils.js?v=__CACHE_VERSION__';
 import {
     FAUCET_TURNSTILE_SITE_KEY,
-    requestFaucetDrip
+    isFaucetTurnstileAlreadyMounted,
+    requestFaucetDrip,
+    shouldMountFaucetTurnstileOnNetworkChange
 } from './faucet.js?v=__CACHE_VERSION__';
 import {
     createPasskeyWallet,
@@ -184,6 +186,7 @@ createApp({
                     if (isWalletInitialized.value) {
                         generateAllQRCodes();
                     }
+                    // Mount once when Receive is shown; do not remount on later visits.
                     if (selectedNetwork.value === 'sepolia') {
                         mountFaucetTurnstile();
                     }
@@ -201,9 +204,12 @@ createApp({
         });
 
         watch(selectedNetwork, (networkId) => {
-            if (networkId === 'sepolia') {
+            if (shouldMountFaucetTurnstileOnNetworkChange(
+                networkId,
+                document.getElementById('receive-tab-pane'),
+            )) {
                 mountFaucetTurnstile();
-            } else {
+            } else if (networkId !== 'sepolia') {
                 teardownFaucetTurnstile();
                 faucetStatus.value = '';
                 faucetStatusOk.value = false;
@@ -287,6 +293,13 @@ createApp({
             if (!window.turnstile) {
                 // Script still loading; retry briefly.
                 setTimeout(mountFaucetTurnstile, 300);
+                return;
+            }
+            // Keep a completed (or in-progress) captcha when switching tabs.
+            if (isFaucetTurnstileAlreadyMounted(
+                faucetTurnstileWidgetId.value,
+                faucetTurnstileEl.value,
+            )) {
                 return;
             }
             teardownFaucetTurnstile();

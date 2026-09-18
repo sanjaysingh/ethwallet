@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FAUCET_API_BASE, requestFaucetDrip } from '../faucet.js';
+import {
+    FAUCET_API_BASE,
+    isFaucetTurnstileAlreadyMounted,
+    requestFaucetDrip,
+    shouldMountFaucetTurnstileOnNetworkChange,
+} from '../faucet.js';
 
 afterEach(() => {
     vi.unstubAllGlobals();
@@ -62,5 +67,30 @@ describe('requestFaucetDrip', () => {
             message: 'Address is on cooldown',
             nextClaimAt: 123,
         });
+    });
+});
+
+describe('isFaucetTurnstileAlreadyMounted', () => {
+    it('is false until a widget id and DOM node both exist', () => {
+        const container = { childNodes: { length: 1 } };
+        expect(isFaucetTurnstileAlreadyMounted(null, container)).toBe(false);
+        expect(isFaucetTurnstileAlreadyMounted(0, { childNodes: { length: 0 } })).toBe(false);
+        expect(isFaucetTurnstileAlreadyMounted(0, null)).toBe(false);
+    });
+
+    it('is true when a widget is already in the container', () => {
+        expect(isFaucetTurnstileAlreadyMounted(0, { childNodes: { length: 1 } })).toBe(true);
+        expect(isFaucetTurnstileAlreadyMounted('widget-1', { childNodes: { length: 2 } })).toBe(true);
+    });
+});
+
+describe('shouldMountFaucetTurnstileOnNetworkChange', () => {
+    it('mounts on Sepolia only when Receive is already visible', () => {
+        const hidden = { classList: { contains: (name) => name === 'fade' } };
+        const visible = { classList: { contains: (name) => name === 'show' } };
+        expect(shouldMountFaucetTurnstileOnNetworkChange('sepolia', hidden)).toBe(false);
+        expect(shouldMountFaucetTurnstileOnNetworkChange('sepolia', visible)).toBe(true);
+        expect(shouldMountFaucetTurnstileOnNetworkChange('base', visible)).toBe(false);
+        expect(shouldMountFaucetTurnstileOnNetworkChange('sepolia', null)).toBe(false);
     });
 });
