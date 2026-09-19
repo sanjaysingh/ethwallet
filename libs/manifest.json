@@ -4,7 +4,7 @@
     {
       "id": "vue",
       "npm": "vue",
-      "version": "3.5.40",
+      "version": "3.5.43",
       "license": "MIT",
       "homepage": "https://vuejs.org/",
       "files": [
@@ -12,7 +12,7 @@
           "id": "vue",
           "from": "dist/vue.global.prod.js",
           "dest": "vue-{{version}}-vue.global.prod.min.js",
-          "sha256": "9e0039a3f6ed0e85308e24d737447f1af6af83d229d69e1267a32b29bc2a1337"
+          "sha256": "b72394052eef1eeda1752db3758ce1be6f88016903f22e5241cc732ea307478e"
         }
       ]
     },
@@ -34,7 +34,7 @@
     {
       "id": "bootstrap",
       "npm": "bootstrap",
-      "version": "5.3.3",
+      "version": "5.3.8",
       "license": "MIT",
       "homepage": "https://getbootstrap.com/",
       "files": [
@@ -42,20 +42,20 @@
           "id": "bootstrap-css",
           "from": "dist/css/bootstrap.min.css",
           "dest": "bootstrap-{{version}}.min.css",
-          "sha256": "3c8f27e6009ccfd710a905e6dcf12d0ee3c6f2ac7da05b0572d3e0d12e736fc8"
+          "sha256": "d85327d99c7a3ee1f9b5d0500d1370acea3ad2db39c163c2f51f232baedbdede"
         },
         {
           "id": "bootstrap-js",
           "from": "dist/js/bootstrap.bundle.min.js",
           "dest": "bootstrap-{{version}}.bundle.min.js",
-          "sha256": "0833b2e9c3a26c258476c46266e6877fc75218625162e0460be9a3a098a61c6c"
+          "sha256": "e4fd49181388c48ec5040bd3fe66f57c29c8e67fcd8502b3354b96ec7ab47cc7"
         }
       ]
     },
     {
       "id": "bootstrap-icons",
       "npm": "bootstrap-icons",
-      "version": "1.11.3",
+      "version": "1.13.1",
       "license": "MIT",
       "homepage": "https://icons.getbootstrap.com/",
       "files": [
@@ -63,17 +63,17 @@
           "id": "bootstrap-icons-css",
           "from": "font/bootstrap-icons.min.css",
           "dest": "bootstrap-icons-{{version}}.min.css",
-          "sha256": "f643d6fe7e679f9de3e16311600c5ef5cd6b098f7a3a8828fcc29255d2b33e62"
+          "sha256": "a5d6387a32ca3baec4d02336b5b3edab50c9dd518355576a011ea3dd9c1d884e"
         },
         {
           "from": "font/fonts/bootstrap-icons.woff2",
           "dest": "fonts/bootstrap-icons.woff2",
-          "sha256": "476adf42b40325098fcfa8b36ab3e769186bb4f6ce6a249753e2e1a9c22bf99e"
+          "sha256": "6c75710364a1ca5604267716f6d28997b26319fdb078cf11e0b42ab66ff2ea61"
         },
         {
           "from": "font/fonts/bootstrap-icons.woff",
           "dest": "fonts/bootstrap-icons.woff",
-          "sha256": "bb1de989b83970f6f4e54de1cd974c5cba55b73582da5e1b225a6d0edf029483"
+          "sha256": "f55513b7b591cb84a3b87ff0e34ea24d4831d6fedc22e54b911ca64b5b544a15"
         }
       ]
     },

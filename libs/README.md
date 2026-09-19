@@ -6,10 +6,10 @@ This app is a static site. Runtime UI/crypto libraries live in this folder, are 
 
 | Library | Pinned | Latest on npm (checked 2026-09-19) | In repo? | Notes |
 | --- | --- | --- | --- | --- |
-| Vue | 3.5.40 | 3.5.43 | Yes | Patch behind; `vue.global.prod.js` copied from npm |
-| Ethers | 6.17.0 | 6.17.0 | Yes | Current; `ethers.umd.min.js` copied from npm |
-| Bootstrap | 5.3.3 | 5.3.8 | Yes | Patch behind; CSS + `bootstrap.bundle.min.js` |
-| Bootstrap Icons | 1.11.3 | 1.13.1 | Yes | Minor behind; CSS + `fonts/*.woff{2}` |
+| Vue | 3.5.43 | 3.5.43 | Yes | Current stable 3.5 (not 3.6 RC) |
+| Ethers | 6.17.0 | 6.17.0 | Yes | Current |
+| Bootstrap | 5.3.8 | 5.3.8 | Yes | Current 5.3 |
+| Bootstrap Icons | 1.13.1 | 1.13.1 | Yes | Current; CSS + `fonts/*.woff{2}` |
 | qrcode (soldair) | 1.5.4 | 1.5.4 | Yes | Current; browser IIFE bundle of `lib/browser.js` |
 
 Pinned copies of Vue, Ethers, Bootstrap, and Bootstrap Icons match the official npm tarball bytes (SHA-256 in `manifest.json`). The qrcode file is a custom browser bundle because that package does not ship a UMD build.
@@ -45,7 +45,6 @@ These are for `npm test` / CI only. They are not loaded by `index.html`. GitHub 
 2. Bumping a library meant manually downloading a dist file, renaming it, and editing `index.html` + README (see PR #13).
 3. `package.json` used `^` ranges for test tools, so `npm install` could float patch versions.
 4. Bootstrap min files still point at missing `.map` files (`sourceMappingURL`), which 404 in DevTools.
-5. Vue/Bootstrap/Icons are a few patches/minors behind npm latest.
 
 ## How to upgrade a vendored library
 
@@ -70,18 +69,12 @@ Re-bundle qrcode even when the version is unchanged:
 npm run vendor -- --force
 ```
 
-## Recommended follow-up upgrades (separate PRs)
+## Follow-ups
 
-Do not combine unrelated major bumps. Suggested order:
-
-1. **Vue 3.5.40 → 3.5.43** (patch; in-DOM compiler build we already use)
-2. **Bootstrap 5.3.3 → 5.3.8** (patch; CSS + bundle JS together)
-3. **Bootstrap Icons 1.11.3 → 1.13.1** (minor; copy CSS + both font files; confirm `fonts/` relative URLs still work)
-4. Optional: vendor Bootstrap `.map` files **or** strip `sourceMappingURL` on copy so DevTools stop 404ing
-5. Optional: load Turnstile only when the Sepolia faucet widget mounts, so the default Wallet tab does not contact Cloudflare
-6. Keep Vitest 3 / jsdom 26 until there is a reason to take Vitest 5 and jsdom 30 (dev-only; not required for the static app)
-
-Ethers 6.17.0 and qrcode 1.5.4 are already current.
+- Optional: vendor Bootstrap `.map` files **or** strip `sourceMappingURL` on copy so DevTools stop 404ing
+- Optional: load Turnstile only when the Sepolia faucet widget mounts, so the default Wallet tab does not contact Cloudflare
+- Keep Vitest 3.2.7 / jsdom 26.1.0 until there is a reason to take Vitest 5 and jsdom 30 (major, test-only)
+- Vue 3.6 is still RC (`3.6.0-rc.9`); stay on 3.5.43 until 3.6 is stable
 
 ## Policy
 
