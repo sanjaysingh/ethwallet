@@ -1,0 +1,96 @@
+{
+  "description": "Pinned browser libraries vendored into this repo. Edit a version, then run `npm run vendor`.",
+  "libraries": [
+    {
+      "id": "vue",
+      "npm": "vue",
+      "version": "3.5.40",
+      "license": "MIT",
+      "homepage": "https://vuejs.org/",
+      "files": [
+        {
+          "id": "vue",
+          "from": "dist/vue.global.prod.js",
+          "dest": "vue-{{version}}-vue.global.prod.min.js",
+          "sha256": "9e0039a3f6ed0e85308e24d737447f1af6af83d229d69e1267a32b29bc2a1337"
+        }
+      ]
+    },
+    {
+      "id": "ethers",
+      "npm": "ethers",
+      "version": "6.17.0",
+      "license": "MIT",
+      "homepage": "https://ethers.org/",
+      "files": [
+        {
+          "id": "ethers",
+          "from": "dist/ethers.umd.min.js",
+          "dest": "ethers-{{version}}-ethers.umd.min.js",
+          "sha256": "532950515fd29ae9f7a21ceb2b68100815024d7944c3d5a92246d5b900bd703b"
+        }
+      ]
+    },
+    {
+      "id": "bootstrap",
+      "npm": "bootstrap",
+      "version": "5.3.3",
+      "license": "MIT",
+      "homepage": "https://getbootstrap.com/",
+      "files": [
+        {
+          "id": "bootstrap-css",
+          "from": "dist/css/bootstrap.min.css",
+          "dest": "bootstrap-{{version}}.min.css",
+          "sha256": "3c8f27e6009ccfd710a905e6dcf12d0ee3c6f2ac7da05b0572d3e0d12e736fc8"
+        },
+        {
+          "id": "bootstrap-js",
+          "from": "dist/js/bootstrap.bundle.min.js",
+          "dest": "bootstrap-{{version}}.bundle.min.js",
+          "sha256": "0833b2e9c3a26c258476c46266e6877fc75218625162e0460be9a3a098a61c6c"
+        }
+      ]
+    },
+    {
+      "id": "bootstrap-icons",
+      "npm": "bootstrap-icons",
+      "version": "1.11.3",
+      "license": "MIT",
+      "homepage": "https://icons.getbootstrap.com/",
+      "files": [
+        {
+          "id": "bootstrap-icons-css",
+          "from": "font/bootstrap-icons.min.css",
+          "dest": "bootstrap-icons-{{version}}.min.css",
+          "sha256": "f643d6fe7e679f9de3e16311600c5ef5cd6b098f7a3a8828fcc29255d2b33e62"
+        },
+        {
+          "from": "font/fonts/bootstrap-icons.woff2",
+          "dest": "fonts/bootstrap-icons.woff2",
+          "sha256": "476adf42b40325098fcfa8b36ab3e769186bb4f6ce6a249753e2e1a9c22bf99e"
+        },
+        {
+          "from": "font/fonts/bootstrap-icons.woff",
+          "dest": "fonts/bootstrap-icons.woff",
+          "sha256": "bb1de989b83970f6f4e54de1cd974c5cba55b73582da5e1b225a6d0edf029483"
+        }
+      ]
+    },
+    {
+      "id": "qrcode",
+      "npm": "qrcode",
+      "version": "1.5.4",
+      "license": "MIT",
+      "homepage": "https://github.com/soldair/node-qrcode",
+      "bundle": {
+        "id": "qrcode",
+        "entry": "lib/browser.js",
+        "globalName": "QRCode",
+        "dest": "qrcode-{{version}}.min.js",
+        "esbuild": "0.25.12",
+        "sha256": "b054bbeb191ad4c130b53f534e2ebd18b805f903d8fb4b7f2b4ea5b25c27b5d6"
+      }
+    }
+  ]
+}
