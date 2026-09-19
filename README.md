@@ -29,8 +29,8 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 - **Transaction Status** - Live transaction status updates with a block explorer link after send
 
 ### 🔒 Self-Contained
-- **No CDN Dependencies** - All libraries stored locally
-- **Offline Capable** - Works without internet connection (except for blockchain operations)
+- **No CDN UI libraries** - Vue, Ethers, Bootstrap, icons, and QRCode are stored in `libs/`
+- **Offline Capable** - Works without internet connection (except for blockchain operations, and Cloudflare Turnstile on the Sepolia faucet)
 - **Single File Deployment** - Easy to host and distribute
 
 ## 🚀 Quick Start
@@ -95,26 +95,28 @@ Then visit `http://localhost:8000` in your browser.
 ## 🔧 Technical Details
 
 ### Architecture
-- **Frontend**: Vue.js 3.5.40 with Bootstrap 5.3.3
-- **Blockchain**: Ethers.js 6.17.0 for all Ethereum interactions
+- **Frontend**: Vue.js <!-- vendor-version:vue -->3.5.40<!-- /vendor-version:vue --> with Bootstrap <!-- vendor-version:bootstrap -->5.3.3<!-- /vendor-version:bootstrap -->
+- **Blockchain**: Ethers.js <!-- vendor-version:ethers -->6.17.0<!-- /vendor-version:ethers --> for all Ethereum interactions
 - **Styling**: Bootstrap 5 with custom CSS for enhanced mobile experience
-- **Icons**: Bootstrap Icons 1.11.3 for consistent iconography
-- **QR Codes**: qrcode 1.5.4 (soldair/node-qrcode) for address QR generation
+- **Icons**: Bootstrap Icons <!-- vendor-version:bootstrap-icons -->1.11.3<!-- /vendor-version:bootstrap-icons --> for consistent iconography
+- **QR Codes**: qrcode <!-- vendor-version:qrcode -->1.5.4<!-- /vendor-version:qrcode --> (soldair/node-qrcode) for address QR generation
 
 ### Local Dependencies
-All dependencies are bundled locally in the `libs/` directory:
+Browser libraries are vendored in `libs/` and pinned in `libs/manifest.json`. The deployed app loads those files locally (no npm/CDN for Vue, Ethers, Bootstrap, or QRCode). To bump a library, change its `version` in the manifest and run `npm run vendor`. Full inventory, exceptions, and the upgrade plan: [`libs/README.md`](libs/README.md).
+
+<!-- vendor-libs:begin -->
 ```
 libs/
-├── bootstrap-5.3.3.min.css           # Bootstrap CSS framework
-├── bootstrap-5.3.3.bundle.min.js     # Bootstrap JavaScript
-├── bootstrap-icons-1.11.3.min.css    # Bootstrap Icons
-├── ethers-6.17.0-ethers.umd.min.js   # Ethereum library
-├── vue-3.5.40-vue.global.prod.min.js # Vue.js framework
-├── qrcode-1.5.4.min.js               # QR code generation
-└── fonts/
-    ├── bootstrap-icons.woff2          # Icon fonts
-    └── bootstrap-icons.woff
+├── bootstrap-5.3.3.bundle.min.js
+├── bootstrap-5.3.3.min.css
+├── bootstrap-icons-1.11.3.min.css
+├── ethers-6.17.0-ethers.umd.min.js
+├── fonts/bootstrap-icons.woff
+├── fonts/bootstrap-icons.woff2
+├── qrcode-1.5.4.min.js
+└── vue-3.5.40-vue.global.prod.min.js
 ```
+<!-- vendor-libs:end -->
 
 ### Supported Networks
 The wallet includes pre-configured support for the networks below. In the UI they are grouped as Testnets, Mainnets, and Custom. **Base** is the default network.
@@ -137,7 +139,7 @@ The wallet includes pre-configured support for the networks below. In the UI the
 - **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs) and `passkey.js` (WebAuthn PRF derivation)
 
 ### Tests
-Unit tests use Vitest and run against `utils.js`. The app itself stays a static site—no bundler is required to deploy.
+Unit tests use Vitest and run against `utils.js` plus the vendored-library manifest. The app itself stays a static site—no bundler is required to deploy.
 
 ```bash
 npm install
@@ -145,6 +147,12 @@ npm test
 ```
 
 CI runs `npm test` on every pull request and push to `main` (workflow: `.github/workflows/test.yml`, job name `unit-tests`).
+
+To refresh `libs/` from the pins in `libs/manifest.json`:
+
+```bash
+npm run vendor
+```
 
 ## 🔒 Security Considerations
 
