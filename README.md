@@ -58,17 +58,16 @@ Then visit `http://localhost:8000` in your browser.
 
 ### Getting Started
 
-1. **Network Configuration**
-   - Select a network from the dropdown (grouped as Testnets, Mainnets, or Custom; default is Base)
-   - Or enter a custom RPC endpoint
+1. **Network**
+   - Choose a network from the compact Network row at the top of the Wallet tab (grouped as Testnets, Mainnets, or Custom; default is Base)
+   - Custom reveals an RPC endpoint field; preset RPC URLs stay in the collapsed Session panel after a wallet is open
    - The wallet will automatically detect network parameters
 
 2. **Wallet Setup**
-   - **New Wallet**: Click **Privatekey Wallet**, **Seedphrase Wallet**, or **Passkey Wallet**
-   - **Passkey Wallet**: Creates a discoverable device passkey and derives an Ethereum key from WebAuthn PRF (Face ID, Windows Hello, etc.)
-   - **Open Passkey Wallet**: Reopens the same address from an existing passkey for this site
-   - **Import Wallet**: Enter your seed phrase or private key and click "Import"
-   - Your wallet will initialize and display all available accounts
+   - **New Wallet**: Under **Create**, choose **Private key**, **Seed phrase**, or **Passkey**
+   - **Passkey**: Creates a discoverable device passkey and derives an Ethereum key from WebAuthn PRF (Face ID, Windows Hello, etc.)
+   - **Import**: Enter your seed phrase or private key and click "Import", or **Import passkey** to reopen a passkey wallet for this site
+   - Your wallet will initialize and show balances on the Wallet tab
    - After clearing a session, use **Previous sessions (this page)** to reconnect a recently used key, phrase, or passkey-derived key (lost on refresh)
 
    Passkey wallets need a secure context (HTTPS or localhost) and an authenticator that supports the WebAuthn **PRF** extension. They produce a normal EOA for this testing app (not an ERC-4337 smart account). The derived key is held in memory only, like other session keys.
@@ -76,10 +75,9 @@ Then visit `http://localhost:8000` in your browser.
 ### Using the Wallet
 
 #### Wallet Tab
-- View all your account addresses and balances
-- Copy addresses to clipboard
-- See your current private key or seed phrase (with show/hide toggle)
-- Clear wallet session when done
+- **Empty:** pick a network, then create, import, or reopen a wallet
+- **Loaded:** see total balance and each account address; copy an address; balances refresh when you return to this tab or tap the refresh control
+- Expand **Session** for the RPC URL, private key or seed phrase (show/hide/copy), or **Clear Wallet Session**
 
 #### Send Tab
 - Select the sending address from your accounts

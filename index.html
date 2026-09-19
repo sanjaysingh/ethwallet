@@ -17,7 +17,7 @@
     <div id="app" v-cloak>
         <!-- Header - Full width, content aligned to page edges -->
         <header class="mb-4 p-2 bg-info-subtle d-flex justify-content-between align-items-center">
-            <h1 class="h3 mb-0"><i class="bi bi-currency-exchange me-2"></i>Ethereum Wallet (Testing Only)</h1> 
+            <h1 class="h3 mb-0">Ethereum Wallet <small class="fs-6 text-muted fw-normal">(Testing Only)</small></h1> 
             <span class="theme-toggle" @click="toggleTheme" style="cursor: pointer;">
                 <i :class="['bi', currentTheme === 'dark' ? 'bi-moon-stars-fill' : 'bi-sun-fill']"></i>
             </span>
@@ -61,139 +61,184 @@
                   <!-- Wallet Pane -->
                   <div class="tab-pane fade show active" id="wallet-tab-pane" role="tabpanel" aria-labelledby="wallet-tab" tabindex="0">
 
-                       <!-- Network & RPC Card -->
-                       <div class="card shadow-sm mb-4">
-                           <div class="card-body">
-                                <h5 class="card-title mb-3"><i class="bi bi-cloud-arrow-up me-1"></i> Network & RPC Configuration</h5>
-                                <div class="mb-3">
-                                    <label for="network-select" class="form-label">Network</label>
-                                    <select class="form-select mb-2" id="network-select" v-model="selectedNetwork" @change="updateRpcEndpoint">
-                                        <optgroup label="Testnets">
-                                            <option v-for="network in testnetNetworks" :key="network.id" :value="network.id">
-                                                {{ network.name }}
-                                            </option>
-                                        </optgroup>
-                                        <optgroup label="Mainnets">
-                                            <option v-for="network in mainnetNetworks" :key="network.id" :value="network.id">
-                                                {{ network.name }}
-                                            </option>
-                                        </optgroup>
-                                        <optgroup label="Other">
-                                            <option value="custom">Custom</option>
-                                        </optgroup>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label for="rpc-endpoint" class="form-label">RPC Endpoint URL</label>
-                                    <input type="text" class="form-control" id="rpc-endpoint" v-model="rpcEndpoint" 
-                                        :readonly="selectedNetwork !== 'custom'"
-                                        :class="selectedNetwork !== 'custom' ? 'bg-secondary-subtle' : ''">
-                                </div>
-                                <!-- Network status display -->
-                                <small :class="networkStatusClass">{{ networkStatusText }}</small>
-                           </div>
+                       <!-- Compact network row -->
+                       <div class="network-toolbar">
+                            <div class="network-toolbar-row">
+                                <label for="network-select" class="form-label">Network</label>
+                                <select class="form-select" id="network-select" v-model="selectedNetwork" @change="updateRpcEndpoint">
+                                    <optgroup label="Testnets">
+                                        <option v-for="network in testnetNetworks" :key="network.id" :value="network.id">
+                                            {{ network.name }}
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="Mainnets">
+                                        <option v-for="network in mainnetNetworks" :key="network.id" :value="network.id">
+                                            {{ network.name }}
+                                        </option>
+                                    </optgroup>
+                                    <optgroup label="Other">
+                                        <option value="custom">Custom</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+                            <small :class="networkStatusClass">{{ networkStatusText }}</small>
+                            <div class="mt-2" v-if="selectedNetwork === 'custom'">
+                                <label for="rpc-endpoint" class="form-label">RPC Endpoint URL</label>
+                                <input type="text" class="form-control" id="rpc-endpoint" v-model="rpcEndpoint">
+                            </div>
                        </div>
 
-                      <!-- Manage Wallet Session Card -->
-                      <div class="card shadow-sm mb-4">
-                           <div class="card-body">
-                               <h5 class="card-title mb-3"><i class="bi bi-key-fill me-1"></i> Manage Wallet Session</h5>
+                      <!-- Accounts dashboard -->
+                      <div class="card shadow-sm mb-4" v-if="isWalletInitialized">
+                          <div class="card-body">
+                              <div class="wallet-balance-hero">
+                                  <button
+                                      type="button"
+                                      class="balance-refresh"
+                                      :disabled="isRefreshingBalances"
+                                      title="Refresh balances"
+                                      @click="refreshBalances"
+                                  >
+                                      <span v-if="isRefreshingBalances" class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                      <i v-else class="bi bi-arrow-clockwise"></i>
+                                      <span class="visually-hidden">Refresh balances</span>
+                                  </button>
+                                  <div class="balance-display">{{ totalBalance }} {{ chainInfo?.nativeSymbol }}</div>
+                                  <div class="text-muted small">{{ accounts.length === 1 ? '1 account' : accounts.length + ' accounts' }}</div>
+                              </div>
+                              <div v-for="account in accounts" :key="account.address" class="account-row">
+                                  <div class="account-row-info">
+                                      <div class="address-display">{{ formatAddressShort(account.address) }}</div>
+                                      <div class="account-row-balance">{{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}</div>
+                                  </div>
+                                  <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
+                                      <i class="bi bi-wallet2"></i>
+                                  </button>
+                              </div>
+                          </div>
+                      </div>
 
-                               <!-- Create/Import Section -->
-                                <div v-if="showWalletManagement">
-                                    <div class="mb-3 d-flex flex-wrap gap-2">
-                                        <button class="btn btn-primary" type="button" @click="generatePrivateKeyWallet"><i class="bi bi-plus-circle me-1"></i> Privatekey Wallet</button>
-                                        <button class="btn btn-primary" type="button" @click="generateSeedPhraseWallet"><i class="bi bi-plus-circle me-1"></i> Seedphrase Wallet</button>
-                                        <button class="btn btn-primary" type="button" @click="generatePasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Create a wallet from a new device passkey' : 'Passkeys require HTTPS or http://localhost in a supported browser'">
-                                            <i class="bi bi-fingerprint me-1"></i> Passkey Wallet
+                      <!-- Session panel (collapsed by default) -->
+                      <div class="card shadow-sm mb-4" v-if="isWalletInitialized">
+                          <button
+                              type="button"
+                              class="session-panel-toggle"
+                              :aria-expanded="sessionPanelOpen ? 'true' : 'false'"
+                              aria-controls="session-panel-body"
+                              @click="toggleSessionPanel"
+                          >
+                              <span><i class="bi bi-key-fill me-1"></i> Session</span>
+                              <i :class="['bi', sessionPanelOpen ? 'bi-chevron-up' : 'bi-chevron-down']"></i>
+                          </button>
+                          <div id="session-panel-body" class="card-body border-top" v-show="sessionPanelOpen">
+                              <div class="mb-3" v-if="selectedNetwork !== 'custom'">
+                                  <label for="rpc-endpoint" class="form-label">RPC Endpoint URL</label>
+                                  <input type="text" class="form-control bg-secondary-subtle" id="rpc-endpoint" v-model="rpcEndpoint" readonly>
+                              </div>
+                              <div class="mb-3">
+                                   <label class="form-label">{{ walletSource === 'mnemonic' ? 'Seed phrase' : 'Private key' }}</label>
+                                   <div class="input-group">
+                                       <span class="form-control private-key-display" :class="{'text-muted': !isPrivateKeyVisible}">{{ currentPrivateKeyDisplay }}</span>
+                                       <button class="btn btn-outline-secondary" type="button" @click="toggleCurrentPrivateKeyVisibility" :title="walletSource === 'mnemonic' ? 'Show/Hide Seed Phrase' : 'Show/Hide Private Key'">
+                                           <i :class="['bi', isPrivateKeyVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
+                                       </button>
+                                       <button class="btn btn-outline-secondary" type="button" @click="copyPrivateKey($event)" :title="walletSource === 'mnemonic' ? 'Copy Seed Phrase' : 'Copy Private Key'">
+                                           <i class="bi bi-key"></i>
+                                      </button>
+                                   </div>
+                                   <small v-if="walletSource === 'passkey'" class="form-text text-muted d-block">This key is derived from your device passkey (WebAuthn PRF) for this session.</small>
+                                   <small class="text-danger">Never share your private key or seed phrase!</small>
+                              </div>
+                              <button class="btn btn-danger btn-sm" @click="clearSession"><i class="bi bi-x-octagon me-1"></i> Clear Wallet Session</button>
+                          </div>
+                      </div>
+
+                      <!-- Open a wallet (empty state) -->
+                      <div class="card shadow-sm mb-4" v-if="showWalletManagement">
+                           <div class="card-body">
+                               <h5 class="card-title mb-4">Open a wallet</h5>
+
+                                <section class="open-wallet-section">
+                                    <h6 class="open-wallet-section-label">Create</h6>
+                                    <div class="create-wallet-actions">
+                                        <button class="create-choice" type="button" @click="generatePrivateKeyWallet" title="Create a new private key wallet">
+                                            <i class="bi bi-key"></i>
+                                            <span>Private key</span>
                                         </button>
-                                        <button class="btn btn-outline-primary" type="button" @click="openPasskeyWallet" :disabled="!passkeysSupported" :title="passkeysSupported ? 'Open a wallet from an existing passkey' : 'Passkeys require HTTPS or http://localhost in a supported browser'">
-                                            <i class="bi bi-unlock me-1"></i> Open Passkey Wallet
+                                        <button class="create-choice" type="button" @click="generateSeedPhraseWallet" title="Create a new seed phrase wallet">
+                                            <i class="bi bi-card-text"></i>
+                                            <span>Seed phrase</span>
+                                        </button>
+                                        <button
+                                            class="create-choice"
+                                            type="button"
+                                            @click="generatePasskeyWallet"
+                                            :disabled="!passkeysSupported"
+                                            :title="passkeysSupported ? 'Create a wallet from a new device passkey' : 'Passkeys require HTTPS or http://localhost in a supported browser'"
+                                        >
+                                            <i class="bi bi-fingerprint"></i>
+                                            <span>Passkey</span>
                                         </button>
                                     </div>
-                                    <p class="form-text text-muted mb-3">
-                                        Passkey wallets use this device's biometric or screen lock (WebAuthn PRF) to derive a private key. The same passkey always reopens the same wallet.
-                                        <span v-if="!passkeysSupported" class="text-warning d-block mt-1">Passkeys are unavailable in this browser or context. Open the app at https:// or http://localhost/ in a WebAuthn-capable browser (IP addresses such as 127.0.0.1 are not valid).</span>
-                                    </p>
-                                    <form class="mb-3" @submit.prevent="initializeWallet">
-                                        <label for="seed-input" class="form-label">Seed Phrase or Private Key</label>
+                                    <p v-if="!passkeysSupported" class="text-warning small mb-0 mt-2">Passkeys need https:// or http://localhost/ in a WebAuthn browser (not 127.0.0.1).</p>
+                                </section>
+
+                                <section class="open-wallet-section">
+                                    <h6 class="open-wallet-section-label">Import</h6>
+                                    <form @submit.prevent="initializeWallet">
+                                         <label for="seed-input" class="visually-hidden">Seed phrase or private key</label>
                                          <div class="input-group">
-                                             <input :type="seedVisible ? 'text' : 'password'" class="form-control" id="seed-input" 
+                                             <input :type="seedVisible ? 'text' : 'password'" class="form-control" id="seed-input"
                                                     name="wallet-secret"
                                                     autocomplete="off"
-                                                    placeholder="Enter seed phrase or private key" v-model="seedPhrase">
+                                                    placeholder="Seed phrase or private key" v-model="seedPhrase">
                                              <button class="btn btn-outline-secondary" type="button" @click="toggleSeedVisibility" title="Show/Hide Key">
                                                 <i :class="['bi', seedVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
                                              </button>
-                                             <button class="btn btn-success" type="submit" :disabled="!seedPhrase" title="Import Wallet">
-                                                <i class="bi bi-box-arrow-in-right me-1"></i> Import
+                                             <button class="btn btn-primary" type="submit" :disabled="!seedPhrase" title="Import Wallet">
+                                                Import
                                              </button>
                                          </div>
                                     </form>
-                                    <div class="mb-3" v-if="previousSessions.length">
-                                        <label for="previous-session-select" class="form-label">Previous sessions (this page)</label>
-                                        <select
-                                            class="form-select"
-                                            id="previous-session-select"
-                                            v-model="selectedPreviousSession"
-                                            @change="reconnectPreviousSession"
+                                    <div class="import-alt">
+                                        <button
+                                            class="import-passkey-btn"
+                                            type="button"
+                                            @click="openPasskeyWallet"
+                                            :disabled="!passkeysSupported"
+                                            :title="passkeysSupported ? 'Import a wallet from an existing device passkey' : 'Passkeys require HTTPS or http://localhost in a supported browser'"
                                         >
-                                            <option disabled value="">Select a previous key or phrase…</option>
-                                            <option
-                                                v-for="(session, index) in previousSessions"
-                                                :key="session.id"
-                                                :value="session.id"
-                                            >
-                                                {{ index + 1 }}. {{ previousSessionLabel(session) }}
-                                            </option>
-                                        </select>
-                                        <small class="form-text text-muted">Remembered until you refresh the page.</small>
+                                            <i class="bi bi-fingerprint"></i> Import passkey
+                                        </button>
                                     </div>
-                                </div>
+                                </section>
 
-                               <!-- Loaded Wallet Info Section -->
-                                <div v-if="showLoadedWalletDetails" class="mt-4 border-top pt-3">
-                                    <div class="mb-3">
-                                         <label class="form-label">Current Session Key:</label>
-                                         <div class="input-group">
-                                             <span class="form-control private-key-display" :class="{'text-muted': !isPrivateKeyVisible}">{{ currentPrivateKeyDisplay }}</span>
-                                             <button class="btn btn-outline-secondary" type="button" @click="toggleCurrentPrivateKeyVisibility" title="Show/Hide Key">
-                                                 <i :class="['bi', isPrivateKeyVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
-                                             </button>
-                                             <button class="btn btn-outline-secondary" type="button" @click="copyPrivateKey($event)" title="Copy Private Key">
-                                                 <i class="bi bi-key"></i>
-                                            </button>
-                                         </div>
-                                         <small v-if="walletSource === 'passkey'" class="form-text text-muted d-block">This key is derived from your device passkey (WebAuthn PRF) for this session.</small>
-                                         <small class="text-danger">Never share your private key or seed phrase!</small>
-                                    </div>
-                                    <button class="btn btn-danger btn-sm" @click="clearSession"><i class="bi bi-x-octagon me-1"></i> Clear Wallet Session</button>
-                               </div>
-
-                               <div v-if="error" class="alert alert-danger mt-3">
-                                   <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
-                               </div>
+                                <section class="open-wallet-section" v-if="previousSessions.length">
+                                    <h6 class="open-wallet-section-label">This page</h6>
+                                    <label for="previous-session-select" class="visually-hidden">Previous sessions</label>
+                                    <select
+                                        class="form-select"
+                                        id="previous-session-select"
+                                        v-model="selectedPreviousSession"
+                                        @change="reconnectPreviousSession"
+                                    >
+                                        <option disabled value="">Previous key or phrase…</option>
+                                        <option
+                                            v-for="(session, index) in previousSessions"
+                                            :key="session.id"
+                                            :value="session.id"
+                                        >
+                                            {{ index + 1 }}. {{ previousSessionLabel(session) }}
+                                        </option>
+                                    </select>
+                                    <small class="form-text text-muted">Cleared on refresh.</small>
+                                </section>
                            </div>
                       </div>
 
-                      <!-- Wallet Details (when wallet is loaded) -->
-                      <div class="card shadow-sm mb-4" v-if="isWalletInitialized">
-                          <div class="card-body">
-                              <h5 class="card-title mb-3"><i class="bi bi-info-circle me-1"></i> Wallet Details</h5>
-                              <!-- Account Cards -->
-                              <div v-for="account in accounts" :key="account.address" class="mb-3">
-                                 <div class="input-group">
-                                      <span class="form-control address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
-                                      <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
-                                          <i class="bi bi-wallet2"></i>
-                                     </button>
-                                      <button class="btn btn-outline-secondary" type="button" @click="copyAccountPrivateKey(account.index, $event)" title="Copy Private Key">
-                                          <i class="bi bi-key"></i>
-                                     </button>
-                                 </div>
-                         </div>
+                      <div v-if="error" class="alert alert-danger">
+                          <i class="bi bi-exclamation-triangle me-2"></i>{{ error }}
                       </div>
-                   </div>
 
                   </div>
 

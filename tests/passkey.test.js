@@ -157,6 +157,9 @@ describe('passkey error helpers', () => {
     it('maps WebAuthn failures to user-facing messages', () => {
         expect(isPasskeyCancellation({ name: 'NotAllowedError' })).toBe(true);
         expect(isPasskeyCancellation({ name: 'AbortError' })).toBe(true);
+        expect(isPasskeyCancellation({ name: 'Error', message: 'Passkey creation was cancelled.' })).toBe(true);
+        expect(isPasskeyCancellation({ name: 'Error', message: 'Passkey unlock was cancelled.' })).toBe(true);
+        expect(isPasskeyCancellation({ name: 'Error', message: 'This authenticator does not support passkey PRF' })).toBe(false);
         expect(passkeyErrorMessage({ name: 'NotAllowedError' })).toMatch(/cancelled/i);
         expect(passkeyErrorMessage({ name: 'SecurityError' })).toMatch(/localhost/i);
         expect(passkeyErrorMessage({ name: 'InvalidStateError' })).toMatch(/Open Passkey Wallet/i);
@@ -220,6 +223,24 @@ describe('createPasskeyWallet', () => {
             userId: new Uint8Array(16).fill(3)
         })).rejects.toThrow(/PRF/);
     });
+
+    it('treats a null create result as cancellation', async () => {
+        const credentials = {
+            create: vi.fn(async () => null),
+            get: vi.fn()
+        };
+
+        const err = await createPasskeyWallet({
+            credentials,
+            rpId: 'localhost',
+            salt,
+            challenge: new Uint8Array(32).fill(2),
+            userId: new Uint8Array(16).fill(3)
+        }).catch((e) => e);
+
+        expect(isPasskeyCancellation(err)).toBe(true);
+        expect(err.message).toMatch(/cancelled/i);
+    });
 });
 
 describe('unlockPasskeyWallet', () => {
@@ -239,5 +260,17 @@ describe('unlockPasskeyWallet', () => {
         expect(result.source).toBe('passkey');
         expect(result.privateKey).toBe(await derivePrivateKeyHexFromPrf(prf));
         expect(credentials.get).toHaveBeenCalledOnce();
+    });
+
+    it('treats a null get result as cancellation', async () => {
+        const err = await unlockPasskeyWallet({
+            credentials: { get: vi.fn(async () => null) },
+            rpId: 'localhost',
+            salt: new Uint8Array(32).fill(1),
+            challenge: new Uint8Array(32).fill(2)
+        }).catch((e) => e);
+
+        expect(isPasskeyCancellation(err)).toBe(true);
+        expect(err.message).toMatch(/cancelled/i);
     });
 });

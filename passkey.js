@@ -154,7 +154,21 @@ export async function derivePrivateKeyHexFromPrf(prfOutput, subtle = globalThis.
 }
 
 export function isPasskeyCancellation(err) {
-    return err?.name === 'NotAllowedError' || err?.name === 'AbortError';
+    if (!err) {
+        return false;
+    }
+    if (err.name === 'NotAllowedError' || err.name === 'AbortError') {
+        return true;
+    }
+    // navigator.credentials.create/get can resolve to null on dismiss, which we
+    // rethrow as a plain Error whose message includes "cancelled".
+    return /cancelled/i.test(err.message || '');
+}
+
+function passkeyCancellationError(message) {
+    const err = new Error(message);
+    err.name = 'NotAllowedError';
+    return err;
 }
 
 export function passkeyErrorMessage(err) {
@@ -207,7 +221,7 @@ export async function createPasskeyWallet({
     });
 
     if (!credential) {
-        throw new Error('Passkey creation was cancelled.');
+        throw passkeyCancellationError('Passkey creation was cancelled.');
     }
 
     let prf = readPrfFromCredential(credential);
@@ -260,7 +274,7 @@ export async function unlockPasskeyWallet({
     });
 
     if (!assertion) {
-        throw new Error('Passkey unlock was cancelled.');
+        throw passkeyCancellationError('Passkey unlock was cancelled.');
     }
 
     const prf = readPrfFromCredential(assertion);
