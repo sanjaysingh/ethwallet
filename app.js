@@ -128,8 +128,9 @@ createApp({
         const alerts = ref([]);
         const showWalletManagement = ref(true);
         const showLoadedWalletDetails = ref(false);
+        const sessionPanelOpen = ref(false);
         const networkStatusText = ref('');
-        const networkStatusClass = ref('form-text text-muted d-block mt-2');
+        const networkStatusClass = ref('network-status text-muted');
         const isPrivateKeyVisible = ref(false);
         const currentPrivateKey = ref('');
         const originalSeedInput = ref(''); // Store the original input (seed phrase or private key)
@@ -177,7 +178,7 @@ createApp({
             }
             
             networkStatusText.value = `Selected Network: ${getNetworkName()}${validNetworkFromUrl ? '' : ' (Default)'}`;
-            networkStatusClass.value = 'form-text text-primary d-block mt-2';
+            networkStatusClass.value = 'network-status text-primary';
             
             // Listen for Receive tab being shown to generate QR codes / faucet captcha
             const receiveTabTrigger = document.getElementById('receive-tab');
@@ -189,6 +190,15 @@ createApp({
                     // Mount once when Receive is shown; do not remount on later visits.
                     if (selectedNetwork.value === 'sepolia') {
                         mountFaucetTurnstile();
+                    }
+                });
+            }
+
+            const walletTabTrigger = document.getElementById('wallet-tab');
+            if (walletTabTrigger) {
+                walletTabTrigger.addEventListener('shown.bs.tab', () => {
+                    if (isWalletInitialized.value) {
+                        refreshBalances();
                     }
                 });
             }
@@ -386,7 +396,27 @@ createApp({
         const updateWalletStateUI = () => {
             showWalletManagement.value = !isWalletInitialized.value;
             showLoadedWalletDetails.value = isWalletInitialized.value;
+            if (!isWalletInitialized.value) {
+                sessionPanelOpen.value = false;
+            }
         };
+
+        const toggleSessionPanel = () => {
+            sessionPanelOpen.value = !sessionPanelOpen.value;
+        };
+
+        const formatAccountBalance = (balance) => {
+            const n = Number(balance);
+            if (!Number.isFinite(n)) {
+                return '0';
+            }
+            return String(Number.parseFloat(n.toFixed(5)));
+        };
+
+        const totalBalance = computed(() => {
+            const sum = accounts.value.reduce((acc, account) => acc + Number(account.balance || 0), 0);
+            return formatAccountBalance(sum);
+        });
 
         const detectChainInfo = async () => {
             // For known networks, use predefined information
@@ -685,29 +715,56 @@ createApp({
         };
 
         const refreshAccounts = async () => {
-            accounts.value = [];
+            if (!provider) {
+                return;
+            }
+
+            const nextAccounts = [];
             for (let i = 0; i < wallets.value.length; i++) {
                 const wallet = wallets.value[i];
                 try {
                     const balance = await provider.getBalance(wallet.address);
-                    accounts.value.push({
+                    nextAccounts.push({
                         address: wallet.address,
                         balance: ethers.formatEther(balance),
                         index: i
                     });
                 } catch (err) {
                     console.error(`Failed to get balance for ${wallet.address}:`, err);
-                    accounts.value.push({
+                    nextAccounts.push({
                         address: wallet.address,
                         balance: '0.0',
                         index: i
                     });
                 }
             }
-            
+
+            accounts.value = nextAccounts;
+
             // Auto-select the first address if none is selected
-            if (accounts.value.length > 0 && !selectedFromAddress.value) {
-                selectedFromAddress.value = accounts.value[0].address;
+            if (nextAccounts.length > 0 && !selectedFromAddress.value) {
+                selectedFromAddress.value = nextAccounts[0].address;
+            }
+        };
+
+        const isRefreshingBalances = ref(false);
+
+        const refreshBalances = async () => {
+            if (!provider || wallets.value.length === 0 || isRefreshingBalances.value) {
+                return;
+            }
+
+            isRefreshingBalances.value = true;
+            try {
+                await refreshAccounts();
+                if (tokenType.value === 'erc20' && tokenAddress.value) {
+                    await updateTokenBalance();
+                }
+            } catch (err) {
+                showError('Failed to refresh balances: ' + err.message);
+                showAlert('Failed to refresh balances: ' + err.message, 'danger');
+            } finally {
+                isRefreshingBalances.value = false;
             }
         };
 
@@ -940,6 +997,7 @@ createApp({
                 pendingWalletSource = '';
                 const message = passkeyErrorMessage(err);
                 if (isPasskeyCancellation(err)) {
+                    error.value = '';
                     showAlert(message, 'info');
                     return;
                 }
@@ -956,6 +1014,7 @@ createApp({
                 pendingWalletSource = '';
                 const message = passkeyErrorMessage(err);
                 if (isPasskeyCancellation(err)) {
+                    error.value = '';
                     showAlert(message, 'info');
                     return;
                 }
@@ -1055,7 +1114,7 @@ createApp({
             updateUrlWithNetwork(selectedNetwork.value);
             
             networkStatusText.value = `Selected Network: ${getNetworkName()}`;
-            networkStatusClass.value = 'form-text text-primary d-block mt-2';
+            networkStatusClass.value = 'network-status text-primary';
             
             if (provider && wallets.value.length > 0 && seedPhrase.value) {
                 try {
@@ -1075,8 +1134,10 @@ createApp({
             alerts,
             showWalletManagement,
             showLoadedWalletDetails,
+            sessionPanelOpen,
             networkStatusText,
             networkStatusClass,
+            totalBalance,
             
             // Private key state
             isPrivateKeyVisible,
@@ -1132,8 +1193,12 @@ createApp({
             toggleCurrentPrivateKeyVisibility,
             copyPrivateKey,
             clearSession,
+            toggleSessionPanel,
+            formatAccountBalance,
             reconnectPreviousSession,
             initializeWallet,
+            refreshBalances,
+            isRefreshingBalances,
             updateTokenBalance,
             estimateGas,
             sendTransaction,
