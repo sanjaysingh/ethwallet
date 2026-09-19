@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Ethereum Wallet (Testing Only)</title>
-    <link rel="icon" href="qr-icon.svg" type="image/svg+xml">
+    <link rel="icon" href="favicon.ico" sizes="32x32">
+    <link rel="icon" href="eth-icon.svg" type="image/svg+xml" sizes="any">
+    <link rel="apple-touch-icon" href="eth-icon.png">
     <link rel="stylesheet" href="libs/bootstrap-5.3.8.min.css" data-lib="bootstrap-css">
     <link rel="stylesheet" href="libs/bootstrap-icons-1.13.1.min.css" data-lib="bootstrap-icons-css">
     <link rel="stylesheet" href="styles.css?v=__CACHE_VERSION__">
@@ -17,7 +19,10 @@
     <div id="app" v-cloak>
         <!-- Header - Full width, content aligned to page edges -->
         <header class="mb-4 p-2 bg-info-subtle d-flex justify-content-between align-items-center">
-            <h1 class="h3 mb-0">Ethereum Wallet <small class="fs-6 text-muted fw-normal">(Testing Only)</small></h1> 
+            <div class="d-flex align-items-center gap-2 min-width-0">
+                <img src="eth-icon.svg" alt="" class="app-title-icon" width="28" height="28">
+                <h1 class="h3 mb-0">Ethereum Wallet <small class="fs-6 text-muted fw-normal">(Testing Only)</small></h1>
+            </div>
             <span class="theme-toggle" @click="toggleTheme" style="cursor: pointer;">
                 <i :class="['bi', currentTheme === 'dark' ? 'bi-moon-stars-fill' : 'bi-sun-fill']"></i>
             </span>

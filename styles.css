@@ -650,6 +650,13 @@ header {
     border-bottom: 1px solid var(--bs-border-color);
 }
 
+.app-title-icon {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    border-radius: 0.35rem;
+}
+
 /* Ensure proper contrast for theme toggle */
 .theme-toggle:hover {
     opacity: 0.8;
