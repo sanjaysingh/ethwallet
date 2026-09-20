@@ -117,7 +117,7 @@
                                       <div class="account-row-balance">{{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}</div>
                                   </div>
                                   <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
-                                      <i class="bi bi-wallet2"></i>
+                                      <i class="bi bi-copy"></i>
                                   </button>
                               </div>
                           </div>
@@ -148,7 +148,7 @@
                                            <i :class="['bi', isPrivateKeyVisible ? 'bi-eye-slash-fill' : 'bi-eye-fill']"></i>
                                        </button>
                                        <button class="btn btn-outline-secondary" type="button" @click="copyPrivateKey($event)" :title="walletSource === 'mnemonic' ? 'Copy Seed Phrase' : 'Copy Private Key'">
-                                           <i class="bi bi-key"></i>
+                                           <i class="bi bi-copy"></i>
                                       </button>
                                    </div>
                                    <small v-if="walletSource === 'passkey'" class="form-text text-muted d-block">This key is derived from your device passkey (WebAuthn PRF) for this session.</small>
@@ -356,10 +356,10 @@
                                                                  <div class="input-group mb-3 w-auto mx-auto" style="max-width: 500px;">
                                      <span class="form-control form-control-lg address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
                                       <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
-                                          <i class="bi bi-wallet2"></i>
+                                          <i class="bi bi-copy"></i>
                                       </button>
                                       <button class="btn btn-outline-secondary" type="button" @click="copyAccountPrivateKey(account.index, $event)" title="Copy Private Key">
-                                          <i class="bi bi-key"></i>
+                                          <i class="bi bi-copy"></i>
                                       </button>
                                  </div>
                                 <!-- QR Code Container -->
