@@ -81,10 +81,13 @@ body {
 /* Copy button animation */
 .btn {
     transition: all 0.3s ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
 }
 
 .btn i {
     transition: all 0.3s ease;
+    pointer-events: none;
 }
 
 .btn i.bi-check-lg {
