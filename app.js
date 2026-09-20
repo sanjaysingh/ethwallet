@@ -1040,22 +1040,6 @@ createApp({
             }
         };
 
-        const copyAccountPrivateKey = async (accountIndex, event) => {
-            const privateKey = walletPrivateKeys[accountIndex];
-            if (!privateKey) {
-                showAlert('No private key available for this wallet', 'warning');
-                return;
-            }
-
-            try {
-                await navigator.clipboard.writeText(privateKey);
-                showCopySuccess(event);
-            } catch (err) {
-                showError('Failed to copy private key to clipboard');
-                showAlert('Failed to copy private key to clipboard', 'warning');
-            }
-        };
-
         const generateQRCode = (address, elementRef) => {
             if (!elementRef || !address) return;
 
@@ -1208,7 +1192,6 @@ createApp({
             openPasskeyWallet,
             previousSessionLabel,
             copyAddress,
-            copyAccountPrivateKey,
             generateQRCode,
             generateAllQRCodes,
             updateRpcEndpoint,
