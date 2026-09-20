@@ -487,40 +487,135 @@ createApp({
             isPrivateKeyVisible.value = !isPrivateKeyVisible.value;
         };
 
-        const showCopySuccess = (event) => {
-            const button = event.target.closest('button');
-            if (!button) {
+        const copyButtonFromEvent = (event) => {
+            if (!event) {
+                return null;
+            }
+            // Must run during the click, before any await: iOS clears currentTarget
+            // after clipboard.writeText resolves, and target may be a text node.
+            if (event.currentTarget && typeof event.currentTarget.closest === 'function') {
+                return event.currentTarget.closest('button') || event.currentTarget;
+            }
+            if (event.target && typeof event.target.closest === 'function') {
+                return event.target.closest('button');
+            }
+            if (event.target && event.target.parentElement) {
+                return event.target.parentElement.closest('button');
+            }
+            return null;
+        };
+
+        const isAppleTouchDevice = () => {
+            const ua = navigator.userAgent || '';
+            return /iPad|iPhone|iPod/i.test(ua)
+                || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        };
+
+        const copyTextWithExecCommand = (text) => {
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.setAttribute('readonly', '');
+            textarea.setAttribute('aria-hidden', 'true');
+            textarea.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0.01;font-size:16px;';
+            document.body.appendChild(textarea);
+
+            const selection = window.getSelection();
+            const previousRange = selection && selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+            let copied = false;
+            const onCopy = (event) => {
+                if (!event.clipboardData) {
+                    return;
+                }
+                event.clipboardData.setData('text/plain', text);
+                event.preventDefault();
+                copied = true;
+            };
+            document.addEventListener('copy', onCopy);
+            try {
+                textarea.focus();
+                textarea.select();
+                textarea.setSelectionRange(0, text.length);
+                copied = document.execCommand('copy') || copied;
+            } catch (error) {
+                copied = copied || false;
+            } finally {
+                document.removeEventListener('copy', onCopy);
+                document.body.removeChild(textarea);
+                if (selection) {
+                    selection.removeAllRanges();
+                    if (previousRange) {
+                        selection.addRange(previousRange);
+                    }
+                }
+            }
+            return copied;
+        };
+
+        const showCopySuccess = (button) => {
+            if (!button || !button.classList) {
                 return;
             }
 
             const icon = button.querySelector('i');
-            if (!icon) {
-                return;
-            }
-
-            const originalClasses = icon.className;
+            const originalIconClasses = icon ? icon.className : '';
             const originalButtonClasses = button.className;
 
-            icon.className = 'bi bi-check-lg';
-            button.className = button.className.replace('btn-outline-secondary', 'btn-success');
+            if (icon) {
+                icon.className = 'bi bi-check-lg';
+            }
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-success');
 
             setTimeout(() => {
-                icon.className = originalClasses;
+                if (icon) {
+                    icon.className = originalIconClasses;
+                }
                 button.className = originalButtonClasses;
             }, 2000);
         };
 
-        const copyPrivateKey = async (event) => {
+        const copyText = (text, event, failMessage) => {
+            if (!text) {
+                return false;
+            }
+            const button = copyButtonFromEvent(event);
+            const succeed = () => showCopySuccess(button);
+            const fail = (err) => {
+                console.error('Failed to copy:', err);
+                showAlert(failMessage, 'warning');
+            };
+
+            // iOS Safari rejects Clipboard API writes unless they stay inside the
+            // tap gesture, so copy there must not wait for a promise.
+            if (isAppleTouchDevice() || !navigator.clipboard || !window.isSecureContext) {
+                if (copyTextWithExecCommand(text)) {
+                    succeed();
+                    return true;
+                }
+                if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                    navigator.clipboard.writeText(text).then(succeed).catch(fail);
+                    return true;
+                }
+                fail(new Error('Copy is not available in this browser.'));
+                return false;
+            }
+
+            navigator.clipboard.writeText(text).then(succeed).catch((err) => {
+                if (copyTextWithExecCommand(text)) {
+                    succeed();
+                    return;
+                }
+                fail(err);
+            });
+            return true;
+        };
+
+        const copyPrivateKey = (event) => {
             if (!originalSeedInput.value) {
                 showAlert('No seed phrase or private key to copy', 'warning');
                 return;
             }
-            try {
-                await navigator.clipboard.writeText(originalSeedInput.value);
-                showCopySuccess(event);
-            } catch (err) {
-                showAlert('Failed to copy to clipboard', 'warning');
-            }
+            copyText(originalSeedInput.value, event, 'Failed to copy to clipboard');
         };
 
         const getTxExplorerUrl = (txHash) => buildTxExplorerUrl(txHash, selectedNetwork.value);
@@ -1030,13 +1125,9 @@ createApp({
             return formatSecretShort(session?.secret);
         };
 
-        const copyAddress = async (address, event) => {
-            try {
-                await navigator.clipboard.writeText(address);
-                showCopySuccess(event);
-            } catch (err) {
-                showError('Failed to copy address to clipboard');
-                showAlert('Failed to copy address to clipboard', 'warning');
+        const copyAddress = (address, event) => {
+            if (!copyText(address, event, 'Failed to copy address to clipboard')) {
+                return;
             }
         };
 
