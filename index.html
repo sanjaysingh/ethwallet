@@ -109,12 +109,16 @@
                                       <span class="visually-hidden">Refresh balances</span>
                                   </button>
                                   <div class="balance-display">{{ totalBalance }} {{ chainInfo?.nativeSymbol }}</div>
+                                  <div v-if="totalBalanceUsd" class="balance-fiat" title="USD estimate from public market price">{{ totalBalanceUsd }}</div>
                                   <div class="text-muted small">{{ accounts.length === 1 ? '1 account' : accounts.length + ' accounts' }}</div>
                               </div>
                               <div v-for="account in accounts" :key="account.address" class="account-row">
                                   <div class="account-row-info">
                                       <div class="address-display">{{ formatAddressShort(account.address) }}</div>
-                                      <div class="account-row-balance">{{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}</div>
+                                      <div class="account-row-balance">
+                                          {{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}
+                                          <span v-if="formatAccountUsd(account.balance)" class="account-row-fiat" title="USD estimate from public market price">{{ formatAccountUsd(account.balance) }}</span>
+                                      </div>
                                   </div>
                                   <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
                                       <i class="bi bi-copy"></i>
@@ -257,7 +261,7 @@
                                  <label class="form-label">From Address:</label>
                                  <select class="form-select" v-model="selectedFromAddress" @change="updateTokenBalance">
                                     <option v-for="account in accounts" :key="account.address" :value="account.address">
-                                        {{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{chainInfo.nativeSymbol}})
+                                        {{ formatAddressShort(account.address) }} ({{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}<template v-if="formatAccountUsd(account.balance)"> · {{ formatAccountUsd(account.balance) }}</template>)
                                     </option>
                                 </select>
                              </div>
@@ -292,7 +296,7 @@
 
                              <div class="mb-3" v-if="estimatedGas">
                                 <div class="alert alert-info">
-                                    <strong>Gas Cost:</strong> {{ estimatedGas.ethCost }} {{ chainInfo?.nativeSymbol }}
+                                    <strong>Gas Cost:</strong> {{ estimatedGas.ethCost }} {{ chainInfo?.nativeSymbol }}<template v-if="formatAccountUsd(estimatedGas.ethCost)"> · {{ formatAccountUsd(estimatedGas.ethCost) }}</template>
                                     <br><small>(Including 20% buffer for safety)</small>
                                 </div>
                              </div>
@@ -354,7 +358,7 @@
                                 <h5 class="card-title mb-3"><i class="bi bi-arrow-down-circle me-1"></i> Receive {{ chainInfo?.nativeSymbol || 'ETH' }}</h5>
                                 <p>Share this address or QR code to receive funds:</p>
                                                                  <div class="input-group mb-3 w-auto mx-auto" style="max-width: 500px;">
-                                     <span class="form-control form-control-lg address-display">{{ formatAddressShort(account.address) }} ({{ Number(parseFloat(Number(account.balance).toFixed(5))) }} {{ chainInfo?.nativeSymbol }})</span>
+                                     <span class="form-control form-control-lg address-display">{{ formatAddressShort(account.address) }} ({{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}<template v-if="formatAccountUsd(account.balance)"> · {{ formatAccountUsd(account.balance) }}</template>)</span>
                                       <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">
                                           <i class="bi bi-copy"></i>
                                       </button>

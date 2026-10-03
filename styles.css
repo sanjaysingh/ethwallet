@@ -34,6 +34,13 @@ body {
     font-weight: 500;
 }
 
+.balance-fiat {
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--bs-secondary-color);
+    margin-top: 0.1rem;
+}
+
 /* Alert Placeholder for Centering */
 #alert-placeholder {
     position: fixed;
@@ -353,6 +360,15 @@ code {
     color: var(--bs-secondary-color);
 }
 
+.account-row-fiat {
+    color: var(--bs-tertiary-color);
+}
+
+.account-row-fiat::before {
+    content: "·";
+    margin: 0 0.35rem;
+}
+
 .account-row .btn {
     flex: 0 0 auto;
 }
@@ -470,6 +486,10 @@ code {
     
     .balance-display {
         font-size: 1.125rem;
+    }
+
+    .balance-fiat {
+        font-size: 0.9375rem;
     }
 
     .network-toolbar {
@@ -590,6 +610,10 @@ code {
     
     .balance-display {
         font-size: 1rem;
+    }
+
+    .balance-fiat {
+        font-size: 0.875rem;
     }
 
     .account-row .address-display {
