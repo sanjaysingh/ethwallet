@@ -22,6 +22,7 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 - **Custom RPC Support** - Add any EVM-compatible network
 - **Automatic Network Detection** - Smart detection of network parameters
 - **Native Token Recognition** - Automatic detection of native tokens (ETH, POL, etc.)
+- **USD Balance Estimates** - Show a dollar value next to ETH amounts using the Base Chainlink ETH/USD feed (same quote on every ETH network)
 
 ### 💸 Transaction Features
 - **Native Token Transfers** - Send ETH, POL, and other native tokens
@@ -76,7 +77,7 @@ Then visit `http://localhost:8000` in your browser.
 
 #### Wallet Tab
 - **Empty:** pick a network, then create, import, or reopen a wallet
-- **Loaded:** see total balance and each account address; copy an address; balances refresh when you return to this tab or tap the refresh control
+- **Loaded:** see total balance (ETH plus a USD estimate when the native token is ETH) and each account address; copy an address; balances refresh when you return to this tab or tap the refresh control
 - Expand **Session** for the RPC URL, private key or seed phrase (show/hide/copy), or **Clear Wallet Session**
 
 #### Send Tab
@@ -134,10 +135,10 @@ The wallet includes pre-configured support for the networks below. In the UI the
 
 ### Customization
 - **Add Networks**: Edit the `availableNetworks` array in `app.js` (set `isTestnet` for grouping)
-- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs) and `passkey.js` (WebAuthn PRF derivation)
+- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs), `passkey.js` (WebAuthn PRF derivation), and `price.js` (Base Chainlink ETH/USD quotes)
 
 ### Tests
-Unit tests use Vitest and run against `utils.js` plus the vendored-library manifest. The app itself stays a static site—no bundler is required to deploy.
+Unit tests use Vitest and run against `utils.js`, `price.js`, plus the vendored-library manifest. The app itself stays a static site—no bundler is required to deploy.
 
 ```bash
 npm install
@@ -156,15 +157,15 @@ npm run vendor
 
 ### What This Wallet Does NOT Do
 - ❌ Store keys permanently (browser memory only)
-- ❌ Send data to external servers
 - ❌ Connect to third-party analytics
 - ❌ Require user registration or accounts
 
 ### What This Wallet DOES Do
 - ✅ Generate cryptographically secure random wallets
-- ✅ Keep all operations client-side
+- ✅ Keep keys and signing client-side
 - ✅ Support industry-standard seed phrases (BIP39)
 - ✅ Use established libraries (Ethers.js)
+- ✅ Read ETH/USD from the Base Chainlink feed (via the Base RPC) to show next to ETH balances
 - ✅ Provide clear security warnings
 
 ### Best Practices

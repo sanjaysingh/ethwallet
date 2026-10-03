@@ -18,6 +18,12 @@ import {
     passkeyErrorMessage,
     unlockPasskeyWallet
 } from './passkey.js?v=__CACHE_VERSION__';
+import {
+    PRICE_RPC_URL,
+    fetchEthUsdPriceFromBaseRpc,
+    formatTokenUsd,
+    usdPriceForSymbol
+} from './price.js?v=__CACHE_VERSION__';
 
 // ERC20 Token ABI
 const ERC20_ABI = [
@@ -413,10 +419,50 @@ createApp({
             return String(Number.parseFloat(n.toFixed(5)));
         };
 
+        const nativeUsdPrices = ref({});
+        let lastNativeUsdPriceFetchAt = 0;
+        const NATIVE_USD_PRICE_CACHE_MS = 60_000;
+
+        const nativeUsdPrice = computed(() =>
+            usdPriceForSymbol(nativeUsdPrices.value, chainInfo.value?.nativeSymbol)
+        );
+
+        const formatAccountUsd = (balance) => formatTokenUsd(balance, nativeUsdPrice.value);
+
         const totalBalance = computed(() => {
             const sum = accounts.value.reduce((acc, account) => acc + Number(account.balance || 0), 0);
             return formatAccountBalance(sum);
         });
+
+        const totalBalanceUsd = computed(() => {
+            const sum = accounts.value.reduce((acc, account) => acc + Number(account.balance || 0), 0);
+            return formatAccountUsd(sum);
+        });
+
+        const refreshNativeUsdPrices = async ({ force = false } = {}) => {
+            const now = Date.now();
+            if (
+                !force &&
+                now - lastNativeUsdPriceFetchAt < NATIVE_USD_PRICE_CACHE_MS &&
+                usdPriceForSymbol(nativeUsdPrices.value, 'ETH') != null
+            ) {
+                return;
+            }
+            const baseRpcUrl = availableNetworks.value.find((network) => network.id === 'base')?.rpcUrl
+                || PRICE_RPC_URL;
+            try {
+                const prices = await fetchEthUsdPriceFromBaseRpc({
+                    ethersLib: ethers,
+                    rpcUrl: baseRpcUrl,
+                });
+                if (prices && Object.keys(prices).length > 0) {
+                    nativeUsdPrices.value = prices;
+                    lastNativeUsdPriceFetchAt = now;
+                }
+            } catch (err) {
+                console.error('Failed to fetch USD prices:', err);
+            }
+        };
 
         const detectChainInfo = async () => {
             // For known networks, use predefined information
@@ -814,6 +860,7 @@ createApp({
                 return;
             }
 
+            const pricePromise = refreshNativeUsdPrices();
             const nextAccounts = [];
             for (let i = 0; i < wallets.value.length; i++) {
                 const wallet = wallets.value[i];
@@ -835,6 +882,7 @@ createApp({
             }
 
             accounts.value = nextAccounts;
+            await pricePromise;
 
             // Auto-select the first address if none is selected
             if (nextAccounts.length > 0 && !selectedFromAddress.value) {
@@ -1213,6 +1261,7 @@ createApp({
             networkStatusText,
             networkStatusClass,
             totalBalance,
+            totalBalanceUsd,
             
             // Private key state
             isPrivateKeyVisible,
@@ -1270,6 +1319,7 @@ createApp({
             clearSession,
             toggleSessionPanel,
             formatAccountBalance,
+            formatAccountUsd,
             reconnectPreviousSession,
             initializeWallet,
             refreshBalances,
