@@ -1,29 +1,16 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+    BASE_ETH_USD_FEED,
     CHAINLINK_AGGREGATOR_V3_ABI,
-    CHAINLINK_USD_FEEDS,
-    fetchNativeUsdPriceFromRpc,
+    PRICE_CHAIN_ID,
+    PRICE_RPC_URL,
+    fetchEthUsdPriceFromBaseRpc,
     formatTokenUsd,
     formatUsdValue,
-    getChainlinkUsdFeed,
     parseAggregatorRoundPrice,
     tokenAmountToUsd,
     usdPriceForSymbol,
 } from '../price.js';
-
-describe('getChainlinkUsdFeed', () => {
-    it('returns the ETH feed for Base and Ethereum', () => {
-        expect(getChainlinkUsdFeed(8453)).toEqual(CHAINLINK_USD_FEEDS[8453]);
-        expect(getChainlinkUsdFeed('1')).toEqual(CHAINLINK_USD_FEEDS[1]);
-        expect(getChainlinkUsdFeed(8453).symbol).toBe('ETH');
-    });
-
-    it('returns the POL feed on Polygon and null when unknown', () => {
-        expect(getChainlinkUsdFeed(137).symbol).toBe('POL');
-        expect(getChainlinkUsdFeed(4663)).toBe(null);
-        expect(getChainlinkUsdFeed(undefined)).toBe(null);
-    });
-});
 
 describe('parseAggregatorRoundPrice', () => {
     it('divides the answer by 10^decimals', () => {
@@ -93,47 +80,39 @@ describe('formatTokenUsd', () => {
     });
 });
 
-describe('fetchNativeUsdPriceFromRpc', () => {
-    it('reads latestRoundData from the current-chain feed', async () => {
+describe('fetchEthUsdPriceFromBaseRpc', () => {
+    it('reads the Base ETH/USD feed over the Base RPC', async () => {
+        const provider = { id: 'base' };
         const latestRoundData = vi.fn().mockResolvedValue({ answer: 2500n * 100000000n });
         const decimals = vi.fn().mockResolvedValue(8n);
         const Contract = vi.fn(() => ({ latestRoundData, decimals }));
-        const provider = { id: 'mock' };
+        const JsonRpcProvider = vi.fn(() => provider);
 
-        await expect(fetchNativeUsdPriceFromRpc({
-            provider,
-            chainId: 8453,
-            ethersLib: { Contract },
+        await expect(fetchEthUsdPriceFromBaseRpc({
+            ethersLib: { Contract, JsonRpcProvider },
         })).resolves.toEqual({ ETH: 2500 });
 
+        expect(JsonRpcProvider).toHaveBeenCalledWith(PRICE_RPC_URL, PRICE_CHAIN_ID);
         expect(Contract).toHaveBeenCalledWith(
-            CHAINLINK_USD_FEEDS[8453].address,
+            BASE_ETH_USD_FEED.address,
             CHAINLINK_AGGREGATOR_V3_ABI,
             provider,
         );
     });
 
-    it('returns POL from the Polygon feed', async () => {
+    it('uses the supplied RPC URL when one is passed', async () => {
+        const JsonRpcProvider = vi.fn(() => ({}));
         const Contract = vi.fn(() => ({
-            latestRoundData: vi.fn().mockResolvedValue({ answer: 10950000 }),
-            decimals: vi.fn().mockResolvedValue(8),
+            latestRoundData: vi.fn().mockResolvedValue({ answer: 2000n * 100000000n }),
+            decimals: vi.fn().mockResolvedValue(8n),
         }));
 
-        await expect(fetchNativeUsdPriceFromRpc({
-            provider: {},
-            chainId: 137,
-            ethersLib: { Contract },
-        })).resolves.toEqual({ POL: 0.1095 });
-    });
+        await fetchEthUsdPriceFromBaseRpc({
+            rpcUrl: 'https://example.invalid/base',
+            ethersLib: { Contract, JsonRpcProvider },
+        });
 
-    it('returns null when the chain has no feed', async () => {
-        const Contract = vi.fn();
-        await expect(fetchNativeUsdPriceFromRpc({
-            provider: {},
-            chainId: 4663,
-            ethersLib: { Contract },
-        })).resolves.toBe(null);
-        expect(Contract).not.toHaveBeenCalled();
+        expect(JsonRpcProvider).toHaveBeenCalledWith('https://example.invalid/base', PRICE_CHAIN_ID);
     });
 
     it('throws when the aggregator answer is unusable', async () => {
@@ -142,10 +121,8 @@ describe('fetchNativeUsdPriceFromRpc', () => {
             decimals: vi.fn().mockResolvedValue(8n),
         }));
 
-        await expect(fetchNativeUsdPriceFromRpc({
-            provider: {},
-            chainId: 1,
-            ethersLib: { Contract },
+        await expect(fetchEthUsdPriceFromBaseRpc({
+            ethersLib: { Contract, JsonRpcProvider: vi.fn(() => ({})) },
         })).rejects.toThrow(/Invalid on-chain price/);
     });
 });

@@ -1,19 +1,17 @@
-/** Native-token USD quotes from Chainlink feeds over the current RPC. */
+/** ETH/USD quotes from the Base Chainlink feed. One RPC, every network. */
+
+export const PRICE_RPC_URL = 'https://mainnet.base.org';
+export const PRICE_CHAIN_ID = 8453;
+
+export const BASE_ETH_USD_FEED = {
+    address: '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70',
+    symbol: 'ETH',
+};
 
 export const CHAINLINK_AGGREGATOR_V3_ABI = [
     'function decimals() view returns (uint8)',
     'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
 ];
-
-/** Chainlink USD aggregators keyed by chain id. */
-export const CHAINLINK_USD_FEEDS = {
-    1: { address: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', symbol: 'ETH' },
-    11155111: { address: '0x694AA1769357215DE4FAC081bf1f309aDC325306', symbol: 'ETH' },
-    8453: { address: '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70', symbol: 'ETH' },
-    10: { address: '0x13e3Ee699D1909E989722E753853AE30b17e08c5', symbol: 'ETH' },
-    42161: { address: '0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612', symbol: 'ETH' },
-    137: { address: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0', symbol: 'POL' },
-};
 
 const usdFormatter = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -21,15 +19,6 @@ const usdFormatter = new Intl.NumberFormat('en-US', {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
 });
-
-/** Return the Chainlink USD feed for a chain, or null when none is known. */
-export function getChainlinkUsdFeed(chainId) {
-    const id = Number(chainId);
-    if (!Number.isFinite(id)) {
-        return null;
-    }
-    return CHAINLINK_USD_FEEDS[id] || null;
-}
 
 /**
  * Convert an aggregator `answer` and `decimals` into a USD number.
@@ -95,26 +84,23 @@ export function formatTokenUsd(tokenAmount, usdPrice) {
 }
 
 /**
- * Read the native-token USD price from a Chainlink feed on the current RPC.
- * Returns `{ ETH: 2684.12 }` / `{ POL: 0.11 }`, or null when the chain has no feed.
+ * Read ETH/USD from the Base Chainlink feed over the Base RPC.
+ * The selected wallet network is ignored — ETH price is the same everywhere.
  */
-export async function fetchNativeUsdPriceFromRpc({
-    provider,
-    chainId,
+export async function fetchEthUsdPriceFromBaseRpc({
     ethersLib = globalThis.ethers,
+    rpcUrl = PRICE_RPC_URL,
 } = {}) {
-    const feed = getChainlinkUsdFeed(chainId);
-    if (!feed) {
-        return null;
-    }
-    if (!provider) {
-        throw new Error('RPC provider is required');
-    }
-    if (!ethersLib?.Contract) {
+    if (!ethersLib?.Contract || !ethersLib?.JsonRpcProvider) {
         throw new Error('ethers is required');
     }
 
-    const contract = new ethersLib.Contract(feed.address, CHAINLINK_AGGREGATOR_V3_ABI, provider);
+    const provider = new ethersLib.JsonRpcProvider(rpcUrl, PRICE_CHAIN_ID);
+    const contract = new ethersLib.Contract(
+        BASE_ETH_USD_FEED.address,
+        CHAINLINK_AGGREGATOR_V3_ABI,
+        provider,
+    );
     const [round, decimals] = await Promise.all([
         contract.latestRoundData(),
         contract.decimals(),
@@ -123,5 +109,5 @@ export async function fetchNativeUsdPriceFromRpc({
     if (price == null) {
         throw new Error('Invalid on-chain price');
     }
-    return { [feed.symbol]: price };
+    return { ETH: price };
 }

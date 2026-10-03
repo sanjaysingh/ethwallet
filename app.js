@@ -19,7 +19,8 @@ import {
     unlockPasskeyWallet
 } from './passkey.js?v=__CACHE_VERSION__';
 import {
-    fetchNativeUsdPriceFromRpc,
+    PRICE_RPC_URL,
+    fetchEthUsdPriceFromBaseRpc,
     formatTokenUsd,
     usdPriceForSymbol
 } from './price.js?v=__CACHE_VERSION__';
@@ -420,7 +421,6 @@ createApp({
 
         const nativeUsdPrices = ref({});
         let lastNativeUsdPriceFetchAt = 0;
-        let lastNativeUsdPriceChainId = null;
         const NATIVE_USD_PRICE_CACHE_MS = 60_000;
 
         const nativeUsdPrice = computed(() =>
@@ -440,32 +440,24 @@ createApp({
         });
 
         const refreshNativeUsdPrices = async ({ force = false } = {}) => {
-            if (!provider) {
-                return;
-            }
-            const chainId = chainInfo.value?.chainId;
             const now = Date.now();
             if (
                 !force &&
-                lastNativeUsdPriceChainId === chainId &&
                 now - lastNativeUsdPriceFetchAt < NATIVE_USD_PRICE_CACHE_MS &&
-                usdPriceForSymbol(nativeUsdPrices.value, chainInfo.value?.nativeSymbol) != null
+                usdPriceForSymbol(nativeUsdPrices.value, 'ETH') != null
             ) {
                 return;
             }
+            const baseRpcUrl = availableNetworks.value.find((network) => network.id === 'base')?.rpcUrl
+                || PRICE_RPC_URL;
             try {
-                const prices = await fetchNativeUsdPriceFromRpc({
-                    provider,
-                    chainId,
+                const prices = await fetchEthUsdPriceFromBaseRpc({
                     ethersLib: ethers,
+                    rpcUrl: baseRpcUrl,
                 });
                 if (prices && Object.keys(prices).length > 0) {
                     nativeUsdPrices.value = prices;
                     lastNativeUsdPriceFetchAt = now;
-                    lastNativeUsdPriceChainId = chainId;
-                } else {
-                    nativeUsdPrices.value = {};
-                    lastNativeUsdPriceChainId = chainId;
                 }
             } catch (err) {
                 console.error('Failed to fetch USD prices:', err);
