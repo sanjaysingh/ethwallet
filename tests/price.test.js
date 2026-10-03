@@ -1,46 +1,42 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
-    COINBASE_SPOT_URLS,
-    COINGECKO_SIMPLE_PRICE_URL,
-    fetchNativeUsdPrices,
+    CHAINLINK_AGGREGATOR_V3_ABI,
+    CHAINLINK_USD_FEEDS,
+    fetchNativeUsdPriceFromRpc,
     formatTokenUsd,
     formatUsdValue,
-    parseCoinbaseSpotPrice,
-    parseCoinGeckoUsdPrice,
+    getChainlinkUsdFeed,
+    parseAggregatorRoundPrice,
     tokenAmountToUsd,
     usdPriceForSymbol,
 } from '../price.js';
 
-afterEach(() => {
-    vi.unstubAllGlobals();
-    vi.restoreAllMocks();
-});
-
-describe('parseCoinbaseSpotPrice', () => {
-    it('reads a positive spot amount', () => {
-        expect(parseCoinbaseSpotPrice({ data: { amount: '2684.435', base: 'ETH', currency: 'USD' } }))
-            .toBe(2684.435);
+describe('getChainlinkUsdFeed', () => {
+    it('returns the ETH feed for Base and Ethereum', () => {
+        expect(getChainlinkUsdFeed(8453)).toEqual(CHAINLINK_USD_FEEDS[8453]);
+        expect(getChainlinkUsdFeed('1')).toEqual(CHAINLINK_USD_FEEDS[1]);
+        expect(getChainlinkUsdFeed(8453).symbol).toBe('ETH');
     });
 
-    it('rejects missing or non-positive amounts', () => {
-        expect(parseCoinbaseSpotPrice(null)).toBe(null);
-        expect(parseCoinbaseSpotPrice({})).toBe(null);
-        expect(parseCoinbaseSpotPrice({ data: { amount: '0' } })).toBe(null);
-        expect(parseCoinbaseSpotPrice({ data: { amount: '-1' } })).toBe(null);
-        expect(parseCoinbaseSpotPrice({ data: { amount: 'nope' } })).toBe(null);
+    it('returns the POL feed on Polygon and null when unknown', () => {
+        expect(getChainlinkUsdFeed(137).symbol).toBe('POL');
+        expect(getChainlinkUsdFeed(4663)).toBe(null);
+        expect(getChainlinkUsdFeed(undefined)).toBe(null);
     });
 });
 
-describe('parseCoinGeckoUsdPrice', () => {
-    it('reads a positive usd field for the given id', () => {
-        expect(parseCoinGeckoUsdPrice({ ethereum: { usd: 2684.12 } }, 'ethereum')).toBe(2684.12);
+describe('parseAggregatorRoundPrice', () => {
+    it('divides the answer by 10^decimals', () => {
+        expect(parseAggregatorRoundPrice(268435000000, 8)).toBe(2684.35);
+        expect(parseAggregatorRoundPrice(10953190n, 8n)).toBe(0.1095319);
     });
 
-    it('rejects missing ids or invalid prices', () => {
-        expect(parseCoinGeckoUsdPrice({ ethereum: { usd: 2684.12 } }, 'missing')).toBe(null);
-        expect(parseCoinGeckoUsdPrice({ ethereum: { usd: 0 } }, 'ethereum')).toBe(null);
-        expect(parseCoinGeckoUsdPrice(null, 'ethereum')).toBe(null);
-        expect(parseCoinGeckoUsdPrice({ ethereum: { usd: 1 } }, '')).toBe(null);
+    it('rejects missing or non-positive answers', () => {
+        expect(parseAggregatorRoundPrice(null, 8)).toBe(null);
+        expect(parseAggregatorRoundPrice(0, 8)).toBe(null);
+        expect(parseAggregatorRoundPrice(-1, 8)).toBe(null);
+        expect(parseAggregatorRoundPrice(100, 20)).toBe(null);
+        expect(parseAggregatorRoundPrice('nope', 8)).toBe(null);
     });
 });
 
@@ -97,72 +93,59 @@ describe('formatTokenUsd', () => {
     });
 });
 
-describe('fetchNativeUsdPrices', () => {
-    it('uses Coinbase spot prices when both assets succeed', async () => {
-        const fetchImpl = vi.fn(async (url) => {
-            if (url === COINBASE_SPOT_URLS.ETH) {
-                return { ok: true, json: async () => ({ data: { amount: '2500' } }) };
-            }
-            if (url === COINBASE_SPOT_URLS.POL) {
-                return { ok: true, json: async () => ({ data: { amount: '0.2' } }) };
-            }
-            throw new Error(`unexpected url ${url}`);
-        });
+describe('fetchNativeUsdPriceFromRpc', () => {
+    it('reads latestRoundData from the current-chain feed', async () => {
+        const latestRoundData = vi.fn().mockResolvedValue({ answer: 2500n * 100000000n });
+        const decimals = vi.fn().mockResolvedValue(8n);
+        const Contract = vi.fn(() => ({ latestRoundData, decimals }));
+        const provider = { id: 'mock' };
 
-        await expect(fetchNativeUsdPrices({ fetchImpl })).resolves.toEqual({
-            ETH: 2500,
-            POL: 0.2,
-        });
-        expect(fetchImpl).toHaveBeenCalledTimes(2);
+        await expect(fetchNativeUsdPriceFromRpc({
+            provider,
+            chainId: 8453,
+            ethersLib: { Contract },
+        })).resolves.toEqual({ ETH: 2500 });
+
+        expect(Contract).toHaveBeenCalledWith(
+            CHAINLINK_USD_FEEDS[8453].address,
+            CHAINLINK_AGGREGATOR_V3_ABI,
+            provider,
+        );
     });
 
-    it('fills missing Coinbase quotes from CoinGecko', async () => {
-        const fetchImpl = vi.fn(async (url) => {
-            if (url === COINBASE_SPOT_URLS.ETH) {
-                return { ok: true, json: async () => ({ data: { amount: '2600' } }) };
-            }
-            if (url === COINBASE_SPOT_URLS.POL) {
-                return { ok: false, json: async () => ({}) };
-            }
-            if (url === COINGECKO_SIMPLE_PRICE_URL) {
-                return {
-                    ok: true,
-                    json: async () => ({
-                        ethereum: { usd: 2599 },
-                        'polygon-ecosystem-token': { usd: 0.15 },
-                    }),
-                };
-            }
-            throw new Error(`unexpected url ${url}`);
-        });
+    it('returns POL from the Polygon feed', async () => {
+        const Contract = vi.fn(() => ({
+            latestRoundData: vi.fn().mockResolvedValue({ answer: 10950000 }),
+            decimals: vi.fn().mockResolvedValue(8),
+        }));
 
-        await expect(fetchNativeUsdPrices({ fetchImpl })).resolves.toEqual({
-            ETH: 2600,
-            POL: 0.15,
-        });
+        await expect(fetchNativeUsdPriceFromRpc({
+            provider: {},
+            chainId: 137,
+            ethersLib: { Contract },
+        })).resolves.toEqual({ POL: 0.1095 });
     });
 
-    it('falls back to CoinGecko when Coinbase fails entirely', async () => {
-        const fetchImpl = vi.fn(async (url) => {
-            if (url === COINBASE_SPOT_URLS.ETH || url === COINBASE_SPOT_URLS.POL) {
-                throw new Error('network');
-            }
-            if (url === COINGECKO_SIMPLE_PRICE_URL) {
-                return {
-                    ok: true,
-                    json: async () => ({ ethereum: { usd: 2400 } }),
-                };
-            }
-            throw new Error(`unexpected url ${url}`);
-        });
-
-        await expect(fetchNativeUsdPrices({ fetchImpl })).resolves.toEqual({
-            ETH: 2400,
-        });
+    it('returns null when the chain has no feed', async () => {
+        const Contract = vi.fn();
+        await expect(fetchNativeUsdPriceFromRpc({
+            provider: {},
+            chainId: 4663,
+            ethersLib: { Contract },
+        })).resolves.toBe(null);
+        expect(Contract).not.toHaveBeenCalled();
     });
 
-    it('throws when no source returns a usable price', async () => {
-        const fetchImpl = vi.fn(async () => ({ ok: false, json: async () => ({}) }));
-        await expect(fetchNativeUsdPrices({ fetchImpl })).rejects.toThrow(/Price request failed/);
+    it('throws when the aggregator answer is unusable', async () => {
+        const Contract = vi.fn(() => ({
+            latestRoundData: vi.fn().mockResolvedValue({ answer: 0n }),
+            decimals: vi.fn().mockResolvedValue(8n),
+        }));
+
+        await expect(fetchNativeUsdPriceFromRpc({
+            provider: {},
+            chainId: 1,
+            ethersLib: { Contract },
+        })).rejects.toThrow(/Invalid on-chain price/);
     });
 });

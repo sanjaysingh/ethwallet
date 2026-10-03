@@ -22,7 +22,7 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 - **Custom RPC Support** - Add any EVM-compatible network
 - **Automatic Network Detection** - Smart detection of network parameters
 - **Native Token Recognition** - Automatic detection of native tokens (ETH, POL, etc.)
-- **USD Balance Estimates** - Show a dollar value next to ETH and POL amounts using a public market price
+- **USD Balance Estimates** - Show a dollar value next to ETH and POL amounts using a Chainlink feed on the current RPC
 
 ### 💸 Transaction Features
 - **Native Token Transfers** - Send ETH, POL, and other native tokens
@@ -31,7 +31,7 @@ A modern, self-contained Ethereum wallet application built for testing and devel
 
 ### 🔒 Self-Contained
 - **No CDN UI libraries** - Vue, Ethers, Bootstrap, icons, and QRCode are stored in `libs/`
-- **Offline Capable** - Works without internet connection (except for blockchain operations, USD price quotes, and Cloudflare Turnstile on the Sepolia faucet)
+- **Offline Capable** - Works without internet connection (except for blockchain operations, and Cloudflare Turnstile on the Sepolia faucet)
 - **Single File Deployment** - Easy to host and distribute
 
 ## 🚀 Quick Start
@@ -135,7 +135,7 @@ The wallet includes pre-configured support for the networks below. In the UI the
 
 ### Customization
 - **Add Networks**: Edit the `availableNetworks` array in `app.js` (set `isTestnet` for grouping)
-- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs), `passkey.js` (WebAuthn PRF derivation), and `price.js` (ETH/POL USD quotes)
+- **Shared helpers**: Pure helpers live in `utils.js` (address formatting, network deep links, explorer URLs), `passkey.js` (WebAuthn PRF derivation), and `price.js` (Chainlink USD quotes over RPC)
 
 ### Tests
 Unit tests use Vitest and run against `utils.js`, `price.js`, plus the vendored-library manifest. The app itself stays a static site—no bundler is required to deploy.
@@ -165,7 +165,7 @@ npm run vendor
 - ✅ Keep keys and signing client-side
 - ✅ Support industry-standard seed phrases (BIP39)
 - ✅ Use established libraries (Ethers.js)
-- ✅ Fetch a public ETH/POL USD quote (Coinbase, with CoinGecko fallback) to show next to balances
+- ✅ Read a Chainlink ETH/POL USD feed over the current RPC to show next to balances
 - ✅ Provide clear security warnings
 
 ### Best Practices

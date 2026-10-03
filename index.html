@@ -109,7 +109,7 @@
                                       <span class="visually-hidden">Refresh balances</span>
                                   </button>
                                   <div class="balance-display">{{ totalBalance }} {{ chainInfo?.nativeSymbol }}</div>
-                                  <div v-if="totalBalanceUsd" class="balance-fiat" title="USD estimate from public market price">{{ totalBalanceUsd }}</div>
+                                  <div v-if="totalBalanceUsd" class="balance-fiat" title="USD estimate from on-chain price feed">{{ totalBalanceUsd }}</div>
                                   <div class="text-muted small">{{ accounts.length === 1 ? '1 account' : accounts.length + ' accounts' }}</div>
                               </div>
                               <div v-for="account in accounts" :key="account.address" class="account-row">
@@ -117,7 +117,7 @@
                                       <div class="address-display">{{ formatAddressShort(account.address) }}</div>
                                       <div class="account-row-balance">
                                           {{ formatAccountBalance(account.balance) }} {{ chainInfo?.nativeSymbol }}
-                                          <span v-if="formatAccountUsd(account.balance)" class="account-row-fiat" title="USD estimate from public market price">{{ formatAccountUsd(account.balance) }}</span>
+                                          <span v-if="formatAccountUsd(account.balance)" class="account-row-fiat" title="USD estimate from on-chain price feed">{{ formatAccountUsd(account.balance) }}</span>
                                       </div>
                                   </div>
                                   <button class="btn btn-outline-secondary" type="button" @click="copyAddress(account.address, $event)" title="Copy Address">

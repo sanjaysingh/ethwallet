@@ -1,16 +1,18 @@
-/** Native-token USD quotes for the wallet UI (public market APIs, no key). */
+/** Native-token USD quotes from Chainlink feeds over the current RPC. */
 
-export const COINBASE_SPOT_URLS = {
-    ETH: 'https://api.coinbase.com/v2/prices/ETH-USD/spot',
-    POL: 'https://api.coinbase.com/v2/prices/POL-USD/spot',
-};
+export const CHAINLINK_AGGREGATOR_V3_ABI = [
+    'function decimals() view returns (uint8)',
+    'function latestRoundData() view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)',
+];
 
-export const COINGECKO_SIMPLE_PRICE_URL =
-    'https://api.coingecko.com/api/v3/simple/price?ids=ethereum,polygon-ecosystem-token&vs_currencies=usd';
-
-export const COINGECKO_IDS = {
-    ETH: 'ethereum',
-    POL: 'polygon-ecosystem-token',
+/** Chainlink USD aggregators keyed by chain id. */
+export const CHAINLINK_USD_FEEDS = {
+    1: { address: '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', symbol: 'ETH' },
+    11155111: { address: '0x694AA1769357215DE4FAC081bf1f309aDC325306', symbol: 'ETH' },
+    8453: { address: '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70', symbol: 'ETH' },
+    10: { address: '0x13e3Ee699D1909E989722E753853AE30b17e08c5', symbol: 'ETH' },
+    42161: { address: '0x639Fe6ab55C921f74e7fac1ee960C0B6293ba612', symbol: 'ETH' },
+    137: { address: '0xAB594600376Ec9fD91F8e885dADF0CE036862dE0', symbol: 'POL' },
 };
 
 const usdFormatter = new Intl.NumberFormat('en-US', {
@@ -20,17 +22,35 @@ const usdFormatter = new Intl.NumberFormat('en-US', {
     maximumFractionDigits: 2,
 });
 
-/** Parse Coinbase `/v2/prices/{PAIR}/spot` JSON into a positive number, or null. */
-export function parseCoinbaseSpotPrice(payload) {
-    const amount = Number(payload?.data?.amount);
-    return Number.isFinite(amount) && amount > 0 ? amount : null;
+/** Return the Chainlink USD feed for a chain, or null when none is known. */
+export function getChainlinkUsdFeed(chainId) {
+    const id = Number(chainId);
+    if (!Number.isFinite(id)) {
+        return null;
+    }
+    return CHAINLINK_USD_FEEDS[id] || null;
 }
 
-/** Parse CoinGecko `/simple/price` JSON for one coin id into a positive number, or null. */
-export function parseCoinGeckoUsdPrice(payload, geckoId) {
-    if (!geckoId) return null;
-    const amount = Number(payload?.[geckoId]?.usd);
-    return Number.isFinite(amount) && amount > 0 ? amount : null;
+/**
+ * Convert an aggregator `answer` and `decimals` into a USD number.
+ * Accepts number or bigint values from ethers.
+ */
+export function parseAggregatorRoundPrice(answer, decimals) {
+    if (answer == null || decimals == null || answer === '' || decimals === '') {
+        return null;
+    }
+    const priceAnswer = Number(answer);
+    const priceDecimals = Number(decimals);
+    if (
+        !Number.isFinite(priceAnswer) ||
+        priceAnswer <= 0 ||
+        !Number.isFinite(priceDecimals) ||
+        priceDecimals < 0 ||
+        priceDecimals > 18
+    ) {
+        return null;
+    }
+    return priceAnswer / (10 ** priceDecimals);
 }
 
 /** Look up a USD price for a native symbol (`ETH`, `POL`, …). */
@@ -74,70 +94,34 @@ export function formatTokenUsd(tokenAmount, usdPrice) {
     return usd == null ? '' : formatUsdValue(usd);
 }
 
-async function fetchUsdPricesFromCoinbase(fetchImpl) {
-    const entries = await Promise.all(
-        Object.entries(COINBASE_SPOT_URLS).map(async ([symbol, url]) => {
-            try {
-                const res = await fetchImpl(url);
-                if (!res.ok) {
-                    return [symbol, null];
-                }
-                return [symbol, parseCoinbaseSpotPrice(await res.json())];
-            } catch {
-                return [symbol, null];
-            }
-        }),
-    );
-    return Object.fromEntries(entries.filter(([, price]) => price != null));
-}
-
-async function fetchUsdPricesFromCoinGecko(fetchImpl) {
-    const res = await fetchImpl(COINGECKO_SIMPLE_PRICE_URL);
-    if (!res.ok) {
-        throw new Error(`Price request failed (${res.status})`);
-    }
-    const data = await res.json();
-    const prices = {};
-    for (const [symbol, geckoId] of Object.entries(COINGECKO_IDS)) {
-        const price = parseCoinGeckoUsdPrice(data, geckoId);
-        if (price != null) {
-            prices[symbol] = price;
-        }
-    }
-    return prices;
-}
-
 /**
- * Fetch ETH and POL USD prices. Coinbase is tried first; CoinGecko fills gaps.
- * Returns a sparse `{ ETH?, POL? }` map. Throws only when both sources fail
- * and no price could be parsed.
+ * Read the native-token USD price from a Chainlink feed on the current RPC.
+ * Returns `{ ETH: 2684.12 }` / `{ POL: 0.11 }`, or null when the chain has no feed.
  */
-export async function fetchNativeUsdPrices({ fetchImpl = globalThis.fetch } = {}) {
-    if (typeof fetchImpl !== 'function') {
-        throw new Error('fetch is not available');
+export async function fetchNativeUsdPriceFromRpc({
+    provider,
+    chainId,
+    ethersLib = globalThis.ethers,
+} = {}) {
+    const feed = getChainlinkUsdFeed(chainId);
+    if (!feed) {
+        return null;
+    }
+    if (!provider) {
+        throw new Error('RPC provider is required');
+    }
+    if (!ethersLib?.Contract) {
+        throw new Error('ethers is required');
     }
 
-    let prices = {};
-    let lastError = null;
-
-    try {
-        prices = await fetchUsdPricesFromCoinbase(fetchImpl);
-    } catch (err) {
-        lastError = err;
+    const contract = new ethersLib.Contract(feed.address, CHAINLINK_AGGREGATOR_V3_ABI, provider);
+    const [round, decimals] = await Promise.all([
+        contract.latestRoundData(),
+        contract.decimals(),
+    ]);
+    const price = parseAggregatorRoundPrice(round?.answer, decimals);
+    if (price == null) {
+        throw new Error('Invalid on-chain price');
     }
-
-    if (prices.ETH == null || prices.POL == null) {
-        try {
-            const fallback = await fetchUsdPricesFromCoinGecko(fetchImpl);
-            prices = { ...fallback, ...prices };
-        } catch (err) {
-            lastError = err;
-        }
-    }
-
-    if (Object.keys(prices).length === 0) {
-        throw lastError || new Error('Unable to fetch USD prices');
-    }
-
-    return prices;
+    return { [feed.symbol]: price };
 }
